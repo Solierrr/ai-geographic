@@ -1,0 +1,27 @@
+name: Environment Status
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  qa:
+    permissions:
+      deployments: write
+    uses: Solierrr/.github/.github/workflows/environment-status.yml@main
+    with:
+      environment: QA
+      check: http
+      url: https://TODO-preencher-apos-criar-o-servico-render-qa.onrender.com
+
+  production:
+    permissions:
+      deployments: write
+    uses: Solierrr/.github/.github/workflows/environment-status.yml@main
+    with:
+      environment: PROD
+      check: gcloud-cluster
+      gcp_project_id: ai-geographic-prod
+      gcp_cluster_name: ai-geographic-gke
+      gcp_zone: us-central1-a
+    secrets:
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
