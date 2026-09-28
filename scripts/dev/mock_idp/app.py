@@ -49,7 +49,7 @@ def mint_test_token(sub: str | None = None):
     agora = datetime.now(timezone.utc)
     payload = {
         "sub": sub or str(uuid.uuid4()),
-        "iss": "geographic-auth",
+        "iss": "solaria-auth",
         "token_type": "access",
         "iat": agora,
         "exp": agora + timedelta(hours=1),

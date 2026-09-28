@@ -56,7 +56,7 @@ def test_decode_user_id_retorna_none_quando_claim_sub_ausente(monkeypatch):
     jwk_client.get_signing_key_from_jwt.return_value = signing_key
     monkeypatch.setattr(jwt_module, "_get_jwk_client", lambda: jwk_client)
     monkeypatch.setattr(
-        jwt_module.pyjwt, "decode", lambda *a, **k: {"iss": "geographic-auth"}
+        jwt_module.pyjwt, "decode", lambda *a, **k: {"iss": "solaria-auth"}
     )
 
     assert decode_user_id("token-sem-sub") is None
