@@ -14,7 +14,7 @@ def test_conversation_schema_accepts_expected_fields():
         conversation_id="conv-1",
         user_id=123,
         user_type="lead",
-        active_agent="router",
+        active_agent="orchestrator",
         status="active",
         started_at=started_at,
         last_interaction_at=last_interaction_at,
@@ -24,7 +24,7 @@ def test_conversation_schema_accepts_expected_fields():
     assert conversation.user_id == 123
     assert conversation.user_type == "lead"
     assert conversation.user_details == {}
-    assert conversation.active_agent == "router"
+    assert conversation.active_agent == "orchestrator"
     assert conversation.status == "active"
     assert conversation.started_at == started_at
     assert conversation.last_interaction_at == last_interaction_at
@@ -36,7 +36,7 @@ def test_conversation_schema_accepts_user_details():
         user_id=123,
         user_type="supplier",
         user_details={"company": "ExemploCorp"},
-        active_agent="router",
+        active_agent="orchestrator",
         status="active",
         started_at=datetime(2026, 7, 1, 10, 0, 0),
         last_interaction_at=datetime(2026, 7, 1, 10, 5, 0),
@@ -66,10 +66,10 @@ def test_message_schema_accepts_agent_and_metadata():
         conversation_id="conv-1",
         role="assistant",
         content="posso ajudar",
-        agent="example_specialist",
+        agent="orchestrator",
         timestamp=timestamp,
         metadata={"source": "workflow"},
     )
 
-    assert message.agent == "example_specialist"
+    assert message.agent == "orchestrator"
     assert message.metadata == {"source": "workflow"}

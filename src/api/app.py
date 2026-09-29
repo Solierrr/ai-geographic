@@ -16,8 +16,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="[NOME_DO_PROJETO] API",
-    description="[preencha: descrição curta do assistente de IA e do domínio que ele atende]",
+    title="ai-geographic API",
+    description="Assistente para perguntas sobre informações geográficas.",
     version="0.1.0",
     lifespan=lifespan,
 )

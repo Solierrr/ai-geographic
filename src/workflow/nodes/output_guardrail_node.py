@@ -9,7 +9,7 @@ from src.core.guardrails.anonymize import deanonymize_text
 from src.core.guardrails.prompt import _PROMPT_COMPLIANCE
 from src.core.llm.llm_groq import llm_groq
 from src.workflow.state import GraphState
-from src.workflow.turn_tracking import append_turn_agent, specialists_used
+from src.workflow.turn_tracking import append_turn_agent
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
             AIMessage(
                 content=final_text,
                 additional_kwargs={
-                    "specialists_used": specialists_used(workflow_steps),
+                    "specialists_used": [],
                     "workflow_steps": workflow_steps,
                 },
             ),

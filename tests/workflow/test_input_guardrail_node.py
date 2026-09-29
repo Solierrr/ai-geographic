@@ -52,7 +52,7 @@ def test_input_guardrail_approves_and_anonymizes(monkeypatch):
 def test_input_guardrail_resets_agents_from_previous_turn(monkeypatch):
     _configure(monkeypatch)
     result = input_guardrail_node.input_guardrail_node(
-        {"messages": [HumanMessage(content="nova", id="msg-2")], "turn_agents": ["router"]}
+        {"messages": [HumanMessage(content="nova", id="msg-2")], "turn_agents": ["orchestrator"]}
     )
     assert result["turn_agents"] == ["input_guardrail_approved"]
 

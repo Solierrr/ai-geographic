@@ -1,8 +1,9 @@
 # ai-geographic
 
-[preencha: parágrafo único explicando o propósito deste assistente de IA —
-qual domínio ele atende, que tipo de usuário conversa com ele e como ele se
-encaixa nos demais serviços da organização. Mínimo de 60 palavras.]
+API de um assistente para perguntas sobre informações geográficas. O fluxo
+valida a entrada, mantém o contexto da conversa, produz uma resposta e revisa
+a saída antes de enviá-la ao usuário. Quando faltam dados para uma resposta
+confiável, o assistente solicita o esclarecimento necessário.
 
 <p>
 

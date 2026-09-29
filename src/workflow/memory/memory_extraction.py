@@ -2,7 +2,7 @@ from src.core.llm.llm_gemini import llm_gemini
 from src.core.llm.llm_groq import llm_groq
 
 MEMORY_EXTRACTION_PROMPT = """Você mantém um perfil de fatos duráveis sobre um \
-usuário de [NOME_DO_PROJETO], com base no histórico de conversas.
+usuário do assistente-geográfico, com base no histórico de conversas.
 
 Fatos existentes:
 {fatos_existentes}

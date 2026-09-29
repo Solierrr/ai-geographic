@@ -14,17 +14,17 @@ def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypat
                 AIMessage(
                     content="Resposta final",
                     additional_kwargs={
-                        "specialists_used": ["faq_reader"],
+                        "specialists_used": [],
                         "workflow_steps": [
-                            "router",
-                            "faq_reader",
+                            "input_guardrail_approved",
                             "orchestrator",
+                            "judge_approved",
                             "output_guardrail",
                         ],
                     },
                 )
             ],
-            "turn_agents": ["router", "faq_reader", "orchestrator"],
+            "turn_agents": ["input_guardrail_approved", "orchestrator", "judge_approved"],
         }
     )
     enviar_mensagem_usuario = AsyncMock()
@@ -67,11 +67,11 @@ def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypat
     assert enviar_mensagem_chatbot.await_args.args[2] == {
         "turnId": "turn-123",
         "contentAnonymized": True,
-        "specialistsUsed": ["faq_reader"],
+        "specialistsUsed": [],
         "workflowSteps": [
-            "router",
-            "faq_reader",
+            "input_guardrail_approved",
             "orchestrator",
+            "judge_approved",
             "output_guardrail",
         ],
     }

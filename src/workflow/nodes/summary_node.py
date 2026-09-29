@@ -7,7 +7,7 @@ from src.workflow.turn_tracking import append_turn_agent
 COMPACT_PROMPT = """
 Você é um assistente encarregado de manter um resumo conciso de uma conversa em andamento.
 Abaixo está o resumo atual (se houver) e as novas mensagens que precisam ser integradas a ele.
-Crie um novo resumo combinando tudo de forma clara e focada nos pontos essenciais de finanças/agenda.
+Crie um novo resumo combinando tudo de forma clara e focada nos pontos essenciais da conversa.
 
 Resumo Atual:
 {resumo_atual}

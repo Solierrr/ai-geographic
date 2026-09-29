@@ -95,7 +95,7 @@ async def test_enviar_observabilidade_nao_manda_header_de_autenticacao(monkeypat
         return_value=Response(200, json={})
     )
 
-    await client.enviar_observabilidade({"node": "router", "status": "ok"})
+    await client.enviar_observabilidade({"node": "orchestrator", "status": "ok"})
 
     assert obs_route.called
     assert "Authorization" not in obs_route.calls.last.request.headers

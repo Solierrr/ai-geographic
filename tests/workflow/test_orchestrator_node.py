@@ -18,10 +18,10 @@ def test_orchestrator_node_uses_prompt_and_fallback(monkeypatch):
     monkeypatch.setattr(orchestrator_node, "llm_groq", Mock(return_value=groq))
 
     resultado = orchestrator_node.orchestrator_node(
-        {"messages": [HumanMessage(content="Olá")], "turn_agents": ["example_specialist"]}
+        {"messages": [HumanMessage(content="Olá")], "turn_agents": ["input_guardrail_approved"]}
     )
 
-    assert resultado["turn_agents"] == ["example_specialist", "orchestrator"]
+    assert resultado["turn_agents"] == ["input_guardrail_approved", "orchestrator"]
     assert resultado["messages"][0].content == "Resposta final consolidada"
     gemini.with_fallbacks.assert_called_once_with([groq])
     mensagens = llm_com_fallback.invoke.call_args.args[0]

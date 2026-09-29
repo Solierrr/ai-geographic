@@ -61,6 +61,11 @@ def _parse_veredito_juiz(texto: str) -> VereditoJuiz:
 
 def judge_node(state: GraphState, config=None) -> dict:
     last_message = state["messages"][-1].content
+    conversation_context = "\n".join(
+        f"{'Usuário' if message.type == 'human' else 'Assistente'}: {message.content}"
+        for message in state["messages"][:-1]
+    )
+    summary = state.get("summary", "")
     messages_with_context = [
         SystemMessage(
             content=(
@@ -69,7 +74,13 @@ def judge_node(state: GraphState, config=None) -> dict:
                 "STATUS: APROVADO ou REPROVADO\nJUSTIFICATIVA: <texto>"
             )
         ),
-        HumanMessage(content=f"Resposta a ser auditada:\n\n{last_message}"),
+        HumanMessage(
+            content=(
+                f"Resumo anterior: {summary or '(nenhum)'}\n\n"
+                f"Conversa: {conversation_context or '(sem mensagens anteriores)'}\n\n"
+                f"Resposta a ser auditada:\n\n{last_message}"
+            )
+        ),
     ]
     try:
         resposta = llm_groq().invoke(messages_with_context, config=config)

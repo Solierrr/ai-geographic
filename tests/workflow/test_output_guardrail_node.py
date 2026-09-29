@@ -21,7 +21,7 @@ def _state(message_id="msg-1"):
     return {
         "messages": [AIMessage(content="Resposta do agente", id=message_id)],
         "pii_map": {"[PII_NOME]": "Ana"},
-        "turn_agents": ["router", "example_specialist", "orchestrator"],
+        "turn_agents": ["input_guardrail_approved", "orchestrator"],
     }
 
 
@@ -38,7 +38,7 @@ def test_output_guardrail_deanonymizes_valid_response(monkeypatch):
     result = output_guardrail_node.output_guardrail_node(_state())
     assert isinstance(result["messages"][0], RemoveMessage)
     assert result["messages"][1].content == "Ola, Ana."
-    assert result["messages"][1].additional_kwargs["specialists_used"] == ["example_specialist"]
+    assert result["messages"][1].additional_kwargs["specialists_used"] == []
     deanonymize.assert_called_once_with("Ola, [PII_NOME].", {"[PII_NOME]": "Ana"})
     llm.with_structured_output.assert_not_called()
 
