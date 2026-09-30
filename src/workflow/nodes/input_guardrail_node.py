@@ -17,7 +17,7 @@ from src.workflow.state import GraphState
 logger = logging.getLogger(__name__)
 
 INPUT_GUARDRAIL_PROMPT = build_system_prompt(
-    _PROMPT_CLASSIFICADOR, include_communication_standards=False
+    _PROMPT_CLASSIFICADOR, include_communication_standards=False, include_date=False
 )
 
 BLOCKED_RESPONSE = (
@@ -76,10 +76,16 @@ def _parse_classificacao(texto: str) -> ClassificacaoEntrada:
 def _blocked_result(
     state: GraphState, category: str, pii_map: dict | None = None
 ) -> dict:
+    message = (
+        "Posso ajudar a localizar um destino específico ou planejar um deslocamento. "
+        "Informe origem e destino se quiser uma rota."
+        if category == "FORA_ESCOPO"
+        else BLOCKED_RESPONSE
+    )
     return {
         "messages": [
             RemoveMessage(id=state["messages"][-1].id),
-            AIMessage(content=BLOCKED_RESPONSE),
+            AIMessage(content=message),
         ],
         "route": "end",
         "pii_map": pii_map or {},
@@ -97,6 +103,13 @@ def input_guardrail_node(state: GraphState, config=None) -> dict:
 
     anonymized_text, pii_map = anonymize_text(last_message)
     formatted_prompt = INPUT_GUARDRAIL_PROMPT.format(mensagem=anonymized_text)
+    if state.get("trip_request") or state.get("location_candidates"):
+        formatted_prompt += (
+            "\nHá uma solicitação de deslocamento/localização pendente nesta conversa. "
+            "Uma resposta curta que complete origem, destino, meio de transporte, "
+            "horário ou escolha um dos lugares mostrados pode ser APROVADO. "
+            "Continue aplicando as regras de segurança e escopo normalmente."
+        )
 
     try:
         resposta = llm_groq().invoke(

@@ -1,9 +1,9 @@
 # Arquitetura do Repositório
 
-Este serviço expõe um assistente de informações geográficas por uma API
-FastAPI. O fluxo usa LangGraph, guardrails de entrada e saída, memória de
-conversa (checkpointer Mongo) e memória de longo prazo (perfil de fatos do
-usuário). O assistente responde diretamente às solicitações aprovadas.
+Este serviço expõe um assistente de deslocamentos por uma API FastAPI. O fluxo
+mantém a arquitetura existente: LangGraph, guardrails de entrada e saída,
+checkpointer Mongo e memória de conversa. O orquestrador extrai a intenção,
+o especialista de rotas decide com dados consultados e o juiz revê a resposta.
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
@@ -12,9 +12,19 @@ usuário). O assistente responde diretamente às solicitações aprovadas.
 </p>
 
 - Fluxo LangGraph (`src/workflow/graph/graph.py`): `input_guardrail` →
-  `condense_memory` → `orchestrator` → `judge` → `output_guardrail`.
-- O `orchestrator` produz a resposta; o `judge` revisa a resposta e pode
-  solicitar uma nova tentativa. Os guardrails verificam entrada e saída.
+  `condense_memory` → `orchestrator` → localização → rotas → clima →
+  `route_specialist` → `output_guardrail` → `judge`. Casos de esclarecimento,
+  localização simples e fora do escopo pulam as consultas desnecessárias.
+- Orquestrador, especialista e juiz compartilham o estado tipado do grafo.
+  Localização, rotas e clima são etapas de ferramenta, não agentes LLM extras.
+  A revisão pode solicitar uma nova tentativa; depois do limite, bloqueia.
+- Resultados completos de Maps/Weather e a geometria da rota usam canais
+  não persistidos do LangGraph. Somente IDs de lugares candidatos ficam no
+  estado para escolhas como “o primeiro”. Mensagens da conversa continuam no
+  checkpointer e no serviço de mensagens conforme a retenção configurada.
+- O adaptador `src/infra/external/google_geographic.py` chama Places Text
+  Search/Details, Routes, Time Zone e Weather. `GOOGLE_MAPS_API_KEY` é
+  separada da chave do modelo Gemini.
 - Integrações de infraestrutura ficam em `src/infra/` (Mongo, Redis, MCP,
   api-messenger); nenhuma delas depende do domínio específico do assistente.
 - Autenticação via JWT emitido pelo `api-auth` (`src/core/security/jwt.py`).

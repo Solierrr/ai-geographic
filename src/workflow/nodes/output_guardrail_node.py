@@ -14,7 +14,7 @@ from src.workflow.turn_tracking import append_turn_agent
 logger = logging.getLogger(__name__)
 
 OUTPUT_GUARDRAIL_PROMPT = build_system_prompt(
-    _PROMPT_COMPLIANCE, include_communication_standards=False
+    _PROMPT_COMPLIANCE, include_communication_standards=False, include_date=False
 )
 
 FALLBACK_RESPONSE = "Não foi possível processar sua solicitação no momento. Tente novamente em instantes."
@@ -73,7 +73,10 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
             [HumanMessage(content=formatted_prompt)], config=config
         )
         revisao = _parse_revisao_compliance(resposta.content)
-        final_text = deanonymize_text(revisao.resposta_revisada, state["pii_map"])
+        if revisao.foi_corrigida or revisao.resposta_revisada != last_message_text:
+            final_text = FALLBACK_RESPONSE
+        else:
+            final_text = deanonymize_text(last_message_text, state.get("pii_map", {}))
     except (GroqError, ValidationError, ValueError, TypeError, AttributeError) as erro:
         # fail-closed: se o guardrail nao conseguiu revisar, nao deixa a
         # resposta nao revisada sair - troca por uma mensagem generica
@@ -81,6 +84,20 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
         final_text = FALLBACK_RESPONSE
 
     workflow_steps = append_turn_agent(state, "output_guardrail")
+    route_data = None
+    if final_text != FALLBACK_RESPONSE and state.get("intent") == "route" and state.get("route_decision"):
+        selected = next(
+            (route for route in state.get("route_options", []) if route.get("route_id") == state["route_decision"].get("route_id")),
+            None,
+        )
+        if selected:
+            route_data = {
+                "route_id": selected["route_id"],
+                "duration_seconds": selected["duration_seconds"],
+                "distance_meters": selected["distance_meters"],
+                "encoded_polyline": selected.get("encoded_polyline"),
+                "provider": "google_maps",
+            }
 
     return {
         "messages": [
@@ -88,10 +105,12 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
             AIMessage(
                 content=final_text,
                 additional_kwargs={
-                    "specialists_used": [],
+                    "specialists_used": ["route_specialist"] if state.get("intent") == "route" and state.get("route_decision") else [],
                     "workflow_steps": workflow_steps,
                 },
             ),
         ],
+        "route_data": route_data,
+        "output_status": "approved" if final_text != FALLBACK_RESPONSE else "rejected",
         "turn_agents": workflow_steps,
     }

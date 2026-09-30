@@ -93,3 +93,14 @@ def test_judge_retries_when_groq_fails(monkeypatch):
         {"messages": [AIMessage(content="Resposta", id="msg-5")], "judge_retries": 0}
     )
     assert result["judge_status"] == "retry"
+
+
+def test_judge_retries_guardrail_rejection_without_approving_fallback(monkeypatch):
+    model = Mock()
+    monkeypatch.setattr(judge_node, "llm_groq", Mock(return_value=model))
+    result = judge_node.judge_node({
+        "messages": [AIMessage(content="Resposta genérica", id="msg-rejected")],
+        "output_status": "rejected", "judge_retries": 0,
+    })
+    assert result["judge_status"] == "retry"
+    model.invoke.assert_not_called()

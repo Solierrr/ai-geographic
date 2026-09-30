@@ -1,17 +1,19 @@
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
+from src.core.config.settings import settings
 
 SYSTEM_CORE_SECURITY = """
 ### IDENTIDADE
-Você opera no ai-geographic, um assistente para perguntas sobre informações
-geográficas.
+Você opera no ai-geographic, um assistente para localização de destinos
+específicos e planejamento de deslocamentos.
 
 ### ESCOPO GLOBAL DO PROJETO
-Dentro do escopo do assistente: explicar conceitos geográficos e ajudar a
-interpretar informações fornecidas na conversa.
+Dentro do escopo: localizar um destino específico e ajudar o usuário a
+comparar rotas e horários com dados de mapas e clima efetivamente consultados.
 
-Fora do escopo: afirmar resultados de consultas a mapas, endereços, rotas ou
-bases externas que não foram disponibilizados no contexto.
+Fora do escopo: listar categorias de estabelecimentos, turismo genérico ou
+afirmar resultados externos que não foram disponibilizados no contexto.
 
 Cada etapa do fluxo deve respeitar esse escopo e sua função específica.
 
@@ -51,12 +53,14 @@ SYSTEM_CORE_COMMUNICATION = """
 # ==============================================================================
 # CONTEXTO DINÂMICO — montado para cada chamada/sessão
 # ==============================================================================
-def get_temporal_context() -> str:
-    now = datetime.now()
+def get_temporal_context(timezone_name: str | None = None) -> str:
+    timezone_name = timezone_name or settings.DEFAULT_TIMEZONE
+    now = datetime.now(ZoneInfo(timezone_name))
     return f"""### CONTEXTO TEMPORAL (OBRIGATÓRIO)
 - Data de referência: {now.strftime("%Y-%m-%d")}
 - Dia da semana: {now.strftime("%A")}
 - Hora do sistema: {now.strftime("%H:%M:%S")}
+- Fuso da data de referência: {timezone_name}
 - Use a 'Data de referência' para calcular "hoje", "ontem", "amanhã" e
   prazos relativos.
 """

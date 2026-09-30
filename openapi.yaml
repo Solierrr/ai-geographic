@@ -1,22 +1,16 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: '[NOME_DO_PROJETO]'
-  description: Contrato HTTP deste serviço. Use um access token emitido pelo api-auth nas operações com bearerAuth.
-    URLs e credenciais são configuradas no cliente HTTP; este arquivo não contém valores privados.
+  title: ai-geographic API
+  description: Assistente para localizar destinos e recomendar deslocamentos com dados
+    de rota e clima.
   version: 0.1.0
-servers:
-- url: http://localhost:{port}
-  description: Execução local; ajuste a porta ou substitua o servidor no cliente HTTP.
-  variables:
-    port:
-      default: '8000'
 paths:
   /chat:
     post:
       tags:
-      - Chat
-      summary: Enviar mensagem ao chatbot
-      description: Valida e persiste a mensagem antes de enfileirar seu processamento.
+      - chat
+      summary: Conversar
+      description: Recebe uma mensagem do usuário e devolve a resposta do assistente.
       operationId: conversar_chat_post
       requestBody:
         content:
@@ -25,12 +19,14 @@ paths:
               $ref: '#/components/schemas/ChatRequest'
         required: true
       responses:
-        '202':
+        '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatAcceptedResponse'
+                $ref: '#/components/schemas/ChatResponse'
+        '401':
+          description: Bearer token ausente ou inválido.
         '422':
           description: Validation Error
           content:
@@ -38,42 +34,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
-      - bearerAuth: []
-  /chat/{event_id}:
-    get:
-      tags:
-      - chat
-      summary: Consultar processamento do chatbot
-      description: Retorna o estado atual e as métricas temporárias de um evento.
-      operationId: consultar_resultado_chat__event_id__get
-      parameters:
-      - name: event_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Event Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChatResultResponse'
-        '404':
-          description: Evento não encontrado ou resultado expirado.
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      security: []
+      - BearerAuth: []
   /health:
     get:
       summary: Health
-      description: Informa se as configurações obrigatórias foram fornecidas.
+      description: Responde 'ok' se o servidor subiu, listando configuração ausente.
       operationId: health_health_get
       responses:
         '200':
@@ -84,105 +49,46 @@ paths:
                 additionalProperties: true
                 type: object
                 title: Response Health Health Get
-      security: []
 components:
   schemas:
-    ChatAcceptedResponse:
-      properties:
-        event_id:
-          type: string
-          format: uuid
-          title: Event Id
-        status:
-          type: string
-          title: Status
-          default: queued
-          enum:
-          - queued
-      type: object
-      required:
-      - event_id
-      title: ChatAcceptedResponse
-      description: Confirma o recebimento da mensagem pela fila.
     ChatRequest:
       properties:
         conversation_id:
           type: string
-          minLength: 1
           title: Conversation Id
-          example: conversa-exemplo-42
+          examples:
+          - b2b-empresa-42
         message:
           type: string
-          maxLength: 8000
           minLength: 1
           title: Message
-          example: Mensagem de exemplo do usuário
+          examples:
+          - Como vou do Centro ao Ibirapuera de carro agora?
+        current_location:
+          anyOf:
+          - $ref: '#/components/schemas/Coordinate'
+          - type: 'null'
+          description: Coordenadas enviadas pelo app após permissão do usuário.
+        user_timezone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Timezone
+          description: Fuso IANA do usuário, usado para interpretar hoje/amanhã; padrão
+            configurado pelo servidor.
+          examples:
+          - America/Sao_Paulo
       type: object
       required:
       - conversation_id
       - message
       title: ChatRequest
-      description: Mensagem enviada ao chatbot.
-    ChatResultResponse:
+      description: O que o cliente envia no POST /chat.
+    ChatResponse:
       properties:
-        event_id:
-          type: string
-          format: uuid
-          title: Event Id
-        status:
-          type: string
-          enum:
-          - queued
-          - processing
-          - completed
-          - failed
-          title: Status
-        conversation_id:
-          type: string
-          nullable: true
-          title: Conversation Id
         response:
           type: string
-          nullable: true
           title: Response
-        error:
-          type: string
-          nullable: true
-          title: Error
-        error_type:
-          type: string
-          nullable: true
-          title: Error Type
-        queued_at:
-          type: string
-          format: date-time
-          nullable: true
-          title: Queued At
-        started_at:
-          type: string
-          format: date-time
-          nullable: true
-          title: Started At
-        completed_at:
-          type: string
-          format: date-time
-          nullable: true
-          title: Completed At
-        queue_wait_ms:
-          type: integer
-          minimum: 0.0
-          nullable: true
-          title: Queue Wait Ms
-        processing_time_ms:
-          type: integer
-          minimum: 0.0
-          nullable: true
-          title: Processing Time Ms
-        total_time_ms:
-          type: integer
-          minimum: 0.0
-          nullable: true
-          title: Total Time Ms
         specialists_used:
           items:
             type: string
@@ -193,12 +99,32 @@ components:
             type: string
           type: array
           title: Workflow Steps
+        route_data:
+          anyOf:
+          - $ref: '#/components/schemas/RouteData'
+          - type: 'null'
       type: object
       required:
-      - event_id
-      - status
-      title: ChatResultResponse
-      description: Estado temporário do processamento assíncrono.
+      - response
+      title: ChatResponse
+      description: O que a API devolve no POST /chat.
+    Coordinate:
+      properties:
+        latitude:
+          type: number
+          maximum: 90.0
+          minimum: -90.0
+          title: Latitude
+        longitude:
+          type: number
+          maximum: 180.0
+          minimum: -180.0
+          title: Longitude
+      type: object
+      required:
+      - latitude
+      - longitude
+      title: Coordinate
     HTTPValidationError:
       properties:
         detail:
@@ -208,6 +134,35 @@ components:
           title: Detail
       type: object
       title: HTTPValidationError
+    RouteData:
+      properties:
+        route_id:
+          type: string
+          title: Route Id
+        duration_seconds:
+          type: integer
+          minimum: 0.0
+          title: Duration Seconds
+        distance_meters:
+          type: integer
+          minimum: 0.0
+          title: Distance Meters
+        encoded_polyline:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Encoded Polyline
+        provider:
+          type: string
+          const: google_maps
+          title: Provider
+      type: object
+      required:
+      - route_id
+      - duration_seconds
+      - distance_meters
+      - provider
+      title: RouteData
     ValidationError:
       properties:
         loc:
@@ -235,8 +190,6 @@ components:
       - type
       title: ValidationError
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: Access token de usuário emitido pelo api-auth.

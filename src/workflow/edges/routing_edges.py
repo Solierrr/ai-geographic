@@ -11,3 +11,21 @@ def decide_post_judge(state: GraphState) -> str:
     if state.get("judge_status") == "retry":
         return "retry"
     return "output_guardrail"
+
+
+def decide_post_orchestrator(state: GraphState) -> str:
+    return "resolve" if state.get("flow_status") == "resolve" else "respond"
+
+
+def decide_post_location(state: GraphState) -> str:
+    return "routes" if state.get("flow_status") == "routes" else "respond"
+
+
+def decide_post_routes(state: GraphState) -> str:
+    return "weather" if state.get("flow_status") == "weather" else "respond"
+
+
+def decide_judge_retry(state: GraphState) -> str:
+    if state.get("judge_status") != "retry":
+        return "end"
+    return "specialist" if state.get("intent") == "route" and state.get("route_options") else "orchestrator"
