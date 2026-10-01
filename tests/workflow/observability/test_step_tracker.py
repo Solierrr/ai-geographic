@@ -50,13 +50,13 @@ def test_step_tracker_detecta_node_sozinho_via_metadata(monkeypatch):
 
     asyncio.run(
         tracker.on_llm_start(
-            {}, ["prompt"], run_id="run-x", metadata={"langgraph_node": "router"}
+            {}, ["prompt"], run_id="run-x", metadata={"langgraph_node": "orchestrator"}
         )
     )
     asyncio.run(tracker.on_llm_end(_resposta_llm(), run_id="run-x"))
 
     doc = enviar.await_args.args[0]
-    assert doc["node"] == "router"
+    assert doc["node"] == "orchestrator"
 
 
 def test_step_tracker_usa_desconhecido_sem_metadata(monkeypatch):
@@ -78,14 +78,14 @@ def test_step_tracker_ordem_incrementa_entre_llm_e_tool(monkeypatch):
 
     async def cenario():
         await tracker.on_llm_start(
-            {}, ["prompt"], run_id="run-1", metadata={"langgraph_node": "example_specialist"}
+            {}, ["prompt"], run_id="run-1", metadata={"langgraph_node": "orchestrator"}
         )
         await tracker.on_llm_end(_resposta_llm(), run_id="run-1")
         await tracker.on_tool_start(
             {"name": "listar_itens_exemplo"},
             "{}",
             run_id="run-2",
-            metadata={"langgraph_node": "example_specialist"},
+            metadata={"langgraph_node": "orchestrator"},
         )
         await tracker.on_tool_end("resultado da tool", run_id="run-2")
 
@@ -164,7 +164,7 @@ def test_step_tracker_on_llm_end_manda_tokens_total(monkeypatch):
 
     asyncio.run(
         tracker.on_llm_start(
-            {}, ["prompt"], run_id="run-ok", metadata={"langgraph_node": "router"}
+            {}, ["prompt"], run_id="run-ok", metadata={"langgraph_node": "orchestrator"}
         )
     )
     asyncio.run(
@@ -195,7 +195,7 @@ def test_step_tracker_on_llm_end_usa_defaults_quando_usage_ausente(monkeypatch):
 
     asyncio.run(
         tracker.on_llm_start(
-            {}, ["prompt"], run_id="run-sem-usage", metadata={"langgraph_node": "router"}
+            {}, ["prompt"], run_id="run-sem-usage", metadata={"langgraph_node": "orchestrator"}
         )
     )
     asyncio.run(tracker.on_llm_end(resposta_sem_usage, run_id="run-sem-usage"))
@@ -219,7 +219,7 @@ def test_step_tracker_on_tool_end_manda_campos_obrigatorios_do_llm(monkeypatch):
             {"name": "listar_itens_exemplo"},
             "{}",
             run_id="run-tool-ok",
-            metadata={"langgraph_node": "example_specialist"},
+            metadata={"langgraph_node": "orchestrator"},
         )
         await tracker.on_tool_end("resultado", run_id="run-tool-ok")
 
@@ -242,7 +242,7 @@ def test_step_tracker_on_tool_error_registra_falha_de_tool(monkeypatch):
             {"name": "listar_itens_exemplo"},
             "{}",
             run_id="run-t",
-            metadata={"langgraph_node": "example_specialist"},
+            metadata={"langgraph_node": "orchestrator"},
         )
         await tracker.on_tool_error(RuntimeError("mcp indisponivel"), run_id="run-t")
 
@@ -270,7 +270,7 @@ def test_step_tracker_categoriza_rate_limit_do_groq(monkeypatch):
 
     asyncio.run(
         tracker.on_llm_start(
-            {}, ["prompt"], run_id="run-rl", metadata={"langgraph_node": "router"}
+            {}, ["prompt"], run_id="run-rl", metadata={"langgraph_node": "orchestrator"}
         )
     )
     asyncio.run(tracker.on_llm_error(erro, run_id="run-rl"))
@@ -310,7 +310,7 @@ def test_step_tracker_categoriza_timeout_de_tool_via_httpx(monkeypatch):
             {"name": "listar_itens_exemplo"},
             "{}",
             run_id="run-tool-to",
-            metadata={"langgraph_node": "example_specialist"},
+            metadata={"langgraph_node": "orchestrator"},
         )
         await tracker.on_tool_error(erro, run_id="run-tool-to")
 
@@ -332,7 +332,7 @@ def test_step_tracker_categoriza_connection_error_de_tool_via_httpx(monkeypatch)
             {"name": "listar_itens_exemplo"},
             "{}",
             run_id="run-tool-conn",
-            metadata={"langgraph_node": "example_specialist"},
+            metadata={"langgraph_node": "orchestrator"},
         )
         await tracker.on_tool_error(erro, run_id="run-tool-conn")
 
@@ -349,7 +349,7 @@ def test_step_tracker_calcula_custo_usd_para_modelo_conhecido(monkeypatch):
     tracker = step_tracker.StepTracker(conversation_id="conv-1")
 
     asyncio.run(
-        tracker.on_llm_start({}, ["prompt"], run_id="run-custo", metadata={"langgraph_node": "router"})
+        tracker.on_llm_start({}, ["prompt"], run_id="run-custo", metadata={"langgraph_node": "orchestrator"})
     )
     asyncio.run(
         tracker.on_llm_end(
@@ -369,7 +369,7 @@ def test_step_tracker_custo_zero_para_modelo_desconhecido(monkeypatch):
     tracker = step_tracker.StepTracker(conversation_id="conv-1")
 
     asyncio.run(
-        tracker.on_llm_start({}, ["prompt"], run_id="run-x", metadata={"langgraph_node": "router"})
+        tracker.on_llm_start({}, ["prompt"], run_id="run-x", metadata={"langgraph_node": "orchestrator"})
     )
     asyncio.run(
         tracker.on_llm_end(_resposta_llm(model="modelo-nunca-visto", tokens_in=1000, tokens_out=500), run_id="run-x")

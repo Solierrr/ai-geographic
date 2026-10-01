@@ -21,7 +21,7 @@ def _state(message_id="msg-1"):
     return {
         "messages": [AIMessage(content="Resposta do agente", id=message_id)],
         "pii_map": {"[PII_NOME]": "Ana"},
-        "turn_agents": ["router", "example_specialist", "orchestrator"],
+        "turn_agents": ["input_guardrail_approved", "orchestrator"],
     }
 
 
@@ -31,28 +31,35 @@ def test_output_guardrail_prompt_omits_communication_standards():
 
 
 def test_output_guardrail_deanonymizes_valid_response(monkeypatch):
-    llm = _mock_llm("Ola, [PII_NOME].", corrected=True)
+    llm = _mock_llm("Resposta do agente")
     deanonymize = Mock(return_value="Ola, Ana.")
     monkeypatch.setattr(output_guardrail_node, "llm_groq", Mock(return_value=llm))
     monkeypatch.setattr(output_guardrail_node, "deanonymize_text", deanonymize)
     result = output_guardrail_node.output_guardrail_node(_state())
     assert isinstance(result["messages"][0], RemoveMessage)
     assert result["messages"][1].content == "Ola, Ana."
-    assert result["messages"][1].additional_kwargs["specialists_used"] == ["example_specialist"]
-    deanonymize.assert_called_once_with("Ola, [PII_NOME].", {"[PII_NOME]": "Ana"})
+    assert result["messages"][1].additional_kwargs["specialists_used"] == []
+    deanonymize.assert_called_once_with("Resposta do agente", {"[PII_NOME]": "Ana"})
     llm.with_structured_output.assert_not_called()
 
 
 def test_output_guardrail_preserves_approved_response(monkeypatch):
-    llm = _mock_llm("Resposta revisada")
-    deanonymize = Mock(return_value="Resposta revisada")
+    llm = _mock_llm("Resposta do agente")
+    deanonymize = Mock(return_value="Resposta do agente")
     monkeypatch.setattr(output_guardrail_node, "llm_groq", Mock(return_value=llm))
     monkeypatch.setattr(output_guardrail_node, "deanonymize_text", deanonymize)
 
     result = output_guardrail_node.output_guardrail_node(_state("msg-2"))
 
-    assert result["messages"][1].content == "Resposta revisada"
-    deanonymize.assert_called_once_with("Resposta revisada", {"[PII_NOME]": "Ana"})
+    assert result["messages"][1].content == "Resposta do agente"
+    deanonymize.assert_called_once_with("Resposta do agente", {"[PII_NOME]": "Ana"})
+
+
+def test_output_guardrail_rejects_rewriting_after_factual_render(monkeypatch):
+    llm = _mock_llm("Duração inventada", corrected=True)
+    monkeypatch.setattr(output_guardrail_node, "llm_groq", Mock(return_value=llm))
+    result = output_guardrail_node.output_guardrail_node(_state())
+    assert result["messages"][1].content == output_guardrail_node.FALLBACK_RESPONSE
 
 
 def test_output_guardrail_fails_closed_when_groq_raises(monkeypatch):

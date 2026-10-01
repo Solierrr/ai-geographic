@@ -1,12 +1,9 @@
 # Arquitetura do Repositório
 
-Este serviço segue o mesmo padrão do `ai-assistant`: uma API FastAPI que
-expõe um chatbot orquestrado via LangGraph, com guardrails de entrada/saída,
-memória de curto prazo (checkpointer Mongo) e memória de longo prazo (perfil
-de fatos do usuário), delegando a especialistas de domínio por meio de um
-Agente Roteador. [preencha: particularidades deste assistente em relação ao
-`ai-assistant` — quais especialistas ele terá, que dados/serviços externos
-ele consome.]
+Este serviço expõe um assistente de deslocamentos por uma API FastAPI. O fluxo
+mantém a arquitetura existente: LangGraph, guardrails de entrada e saída,
+checkpointer Mongo e memória de conversa. O orquestrador extrai a intenção,
+o especialista de rotas decide com dados consultados e o juiz revê a resposta.
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
@@ -14,13 +11,20 @@ ele consome.]
   </a>
 </p>
 
-- Orquestração multiagente via LangGraph (`src/workflow/graph/graph.py`):
-  `input_guardrail` → `condense_memory` → `router` → especialista(s) →
-  `orchestrator` → `judge` → `output_guardrail`.
-- Cada especialista de domínio vive em `src/agents/specialist/<nome>/` (prompt)
-  e `src/workflow/nodes/<nome>_node.py` (node); este template inclui dois
-  especialistas de exemplo (`example_specialist`, `example_specialist_two`)
-  a serem substituídos pelos especialistas reais deste assistente.
+- Fluxo LangGraph (`src/workflow/graph/graph.py`): `input_guardrail` →
+  `condense_memory` → `orchestrator` → localização → rotas → clima →
+  `route_specialist` → `output_guardrail` → `judge`. Casos de esclarecimento,
+  localização simples e fora do escopo pulam as consultas desnecessárias.
+- Orquestrador, especialista e juiz compartilham o estado tipado do grafo.
+  Localização, rotas e clima são etapas de ferramenta, não agentes LLM extras.
+  A revisão pode solicitar uma nova tentativa; depois do limite, bloqueia.
+- Resultados completos de Maps/Weather e a geometria da rota usam canais
+  não persistidos do LangGraph. Somente IDs de lugares candidatos ficam no
+  estado para escolhas como “o primeiro”. Mensagens da conversa continuam no
+  checkpointer e no serviço de mensagens conforme a retenção configurada.
+- O adaptador `src/infra/external/google_geographic.py` chama Places Text
+  Search/Details, Routes, Time Zone e Weather. `GOOGLE_MAPS_API_KEY` é
+  separada da chave do modelo Gemini.
 - Integrações de infraestrutura ficam em `src/infra/` (Mongo, Redis, MCP,
   api-messenger); nenhuma delas depende do domínio específico do assistente.
 - Autenticação via JWT emitido pelo `api-auth` (`src/core/security/jwt.py`).
@@ -29,7 +33,7 @@ ele consome.]
 ├── .github/
 │   └── pull_request_template.md
 ├── src/
-│   ├── agents/       # framework base + especialistas
+│   ├── agents/       # prompts do assistente e do juiz
 │   ├── api/          # FastAPI (rotas, schemas)
 │   ├── core/         # config, llm, guardrails, logging, security
 │   ├── infra/        # clientes de infraestrutura (mongo, redis, mcp, api-messenger)

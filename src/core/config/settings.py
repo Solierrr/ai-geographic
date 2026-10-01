@@ -1,6 +1,7 @@
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     MONGO_URI: str = Field(
         "mongodb://localhost:27017",
@@ -28,6 +29,8 @@ class Settings(BaseSettings):
     MCP_API_KEY: str | None = None
 
     GOOGLE_API_KEY: str | None = None
+    GOOGLE_MAPS_API_KEY: str | None = None
+    DEFAULT_TIMEZONE: str = "America/Sao_Paulo"
     GROQ_API_KEY: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

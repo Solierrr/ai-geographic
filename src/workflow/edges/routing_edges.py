@@ -1,24 +1,4 @@
-from src.workflow import config
 from src.workflow.state import GraphState
-
-
-def consulted_specialists(state: GraphState) -> set[str]:
-    return set(state.get("turn_agents", [])) & config.SPECIALIST_ROUTES
-
-
-def available_specialist_routes(state: GraphState) -> set[str]:
-    return config.SPECIALIST_ROUTES - consulted_specialists(state)
-
-
-def decide_post_router(state: GraphState) -> str:
-    route = state.get("route", "end")
-    if route == "orchestrator":
-        return "orchestrator"
-    if route not in config.SPECIALIST_ROUTES:
-        return "end"
-    if route not in available_specialist_routes(state):
-        return "orchestrator"
-    return route
 
 
 def decide_post_input_guardrail(state: GraphState) -> str:
@@ -31,3 +11,25 @@ def decide_post_judge(state: GraphState) -> str:
     if state.get("judge_status") == "retry":
         return "retry"
     return "output_guardrail"
+
+
+def decide_post_orchestrator(state: GraphState) -> str:
+    return "resolve" if state.get("flow_status") == "resolve" else "respond"
+
+
+def decide_post_location(state: GraphState) -> str:
+    return "routes" if state.get("flow_status") == "routes" else "respond"
+
+
+def decide_post_routes(state: GraphState) -> str:
+    return "weather" if state.get("flow_status") == "weather" else "respond"
+
+
+def decide_judge_retry(state: GraphState) -> str:
+    if state.get("judge_status") != "retry":
+        return "end"
+    return (
+        "specialist"
+        if state.get("intent") == "route" and state.get("route_options")
+        else "orchestrator"
+    )

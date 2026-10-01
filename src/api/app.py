@@ -16,8 +16,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="[NOME_DO_PROJETO] API",
-    description="[preencha: descrição curta do assistente de IA e do domínio que ele atende]",
+    title="ai-geographic API",
+    description="Assistente para localizar destinos e recomendar deslocamentos com dados de rota e clima.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -33,6 +33,8 @@ def health() -> dict:
         missing.append("GOOGLE_API_KEY")
     if not settings.GROQ_API_KEY:
         missing.append("GROQ_API_KEY")
+    if not settings.GOOGLE_MAPS_API_KEY:
+        missing.append("GOOGLE_MAPS_API_KEY")
 
     return {
         "status": "ok" if not missing else "atencao",

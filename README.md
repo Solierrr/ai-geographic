@@ -1,8 +1,17 @@
 # ai-geographic
 
-[preencha: parágrafo único explicando o propósito deste assistente de IA —
-qual domínio ele atende, que tipo de usuário conversa com ele e como ele se
-encaixa nos demais serviços da organização. Mínimo de 60 palavras.]
+API de um assistente para localizar destinos e sugerir deslocamentos com
+dados do Google Maps Platform e previsão do tempo. O fluxo pede origem,
+destino, modo ou horário quando necessário, consulta as APIs e só recomenda
+uma rota apoiada nos resultados recebidos. Pedidos de catálogo, como listar
+pizzarias, ficam fora do escopo.
+
+A primeira versão calcula rotas de carro ou a pé. Pode comparar alternativas
+de rota ou três horários dentro de uma janela de até oito horas. A resposta
+traz texto e `route_data` com a geometria opcional da rota; a exibição do mapa
+no app ou no Google Maps será decidida depois.
+Se a geometria for exibida em um mapa, a implementação visual deverá usar
+Google Maps e manter as atribuições exigidas pelo provedor.
 
 <p>
 
@@ -24,6 +33,7 @@ encaixa nos demais serviços da organização. Mínimo de 60 palavras.]
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [RUNNING.md](./RUNNING.md)
+- [docs/plano-implementacao-rotas.md](./docs/plano-implementacao-rotas.md)
 
 ## Contribuindo
 

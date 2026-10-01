@@ -34,6 +34,26 @@ def test_judge_approves_valid_response(monkeypatch):
     llm.with_structured_output.assert_not_called()
 
 
+def test_judge_receives_user_question_and_summary(monkeypatch):
+    llm = _mock_llm("APROVADO")
+    monkeypatch.setattr(judge_node, "llm_groq", Mock(return_value=llm))
+
+    judge_node.judge_node(
+        {
+            "messages": [
+                HumanMessage(content="Onde fica essa cidade?"),
+                AIMessage(content="Fica em São Paulo.", id="msg-1"),
+            ],
+            "summary": "A cidade mencionada foi Campinas.",
+        }
+    )
+
+    audit_context = llm.invoke.call_args.args[0][1].content
+    assert "A cidade mencionada foi Campinas." in audit_context
+    assert "Usuário: Onde fica essa cidade?" in audit_context
+    assert "Resposta a ser auditada:\n\nFica em São Paulo." in audit_context
+
+
 def test_judge_retries_once_when_rejected(monkeypatch):
     llm = _mock_llm("REPROVADO")
     monkeypatch.setattr(judge_node, "llm_groq", Mock(return_value=llm))
@@ -73,3 +93,14 @@ def test_judge_retries_when_groq_fails(monkeypatch):
         {"messages": [AIMessage(content="Resposta", id="msg-5")], "judge_retries": 0}
     )
     assert result["judge_status"] == "retry"
+
+
+def test_judge_retries_guardrail_rejection_without_approving_fallback(monkeypatch):
+    model = Mock()
+    monkeypatch.setattr(judge_node, "llm_groq", Mock(return_value=model))
+    result = judge_node.judge_node({
+        "messages": [AIMessage(content="Resposta genérica", id="msg-rejected")],
+        "output_status": "rejected", "judge_retries": 0,
+    })
+    assert result["judge_status"] == "retry"
+    model.invoke.assert_not_called()

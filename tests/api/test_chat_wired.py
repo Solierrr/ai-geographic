@@ -34,8 +34,8 @@ def test_chat_calls_execute_turn_and_maps_response(monkeypatch):
     fake_message = AIMessage(
         content="Recomendo um instalador na região.",
         additional_kwargs={
-            "specialists_used": ["professional_suggester"],
-            "workflow_steps": ["router", "professional_suggester", "orchestrator"],
+            "specialists_used": [],
+            "workflow_steps": ["input_guardrail_approved", "orchestrator", "judge_approved"],
         },
     )
     fake_final_state = {"messages": [fake_message]}
@@ -53,11 +53,11 @@ def test_chat_calls_execute_turn_and_maps_response(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["response"] == "Recomendo um instalador na região."
-    assert body["specialists_used"] == ["professional_suggester"]
+    assert body["specialists_used"] == []
     assert body["workflow_steps"] == [
-        "router",
-        "professional_suggester",
+        "input_guardrail_approved",
         "orchestrator",
+        "judge_approved",
     ]
 
     mock_execute_turn.assert_awaited_once()
@@ -72,7 +72,7 @@ def test_chat_falls_back_to_turn_agents_when_no_metadata(monkeypatch):
     fake_message = AIMessage(content="Resposta direta.", additional_kwargs={})
     fake_final_state = {
         "messages": [fake_message],
-        "turn_agents": ["router_direct_response"],
+        "turn_agents": ["orchestrator"],
     }
 
     mock_execute_turn = AsyncMock(return_value=fake_final_state)
@@ -87,7 +87,7 @@ def test_chat_falls_back_to_turn_agents_when_no_metadata(monkeypatch):
 
     body = response.json()
     assert body["specialists_used"] == []
-    assert body["workflow_steps"] == ["router_direct_response"]
+    assert body["workflow_steps"] == ["orchestrator"]
 
 
 def test_chat_401_sem_header_authorization():
@@ -95,7 +95,7 @@ def test_chat_401_sem_header_authorization():
         response = client.post(
             "/chat", json={"conversation_id": "conv-3", "message": "Oi"}
         )
-    assert response.status_code == 401  # authorization é Header(None) opcional; 401 é levantado na rota
+    assert response.status_code == 401  # A rota exige Bearer JWT.
 
 
 def test_chat_401_header_mal_formado():
