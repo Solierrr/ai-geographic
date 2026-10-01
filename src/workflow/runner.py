@@ -62,7 +62,10 @@ async def _get_or_create_conversation_id(thread_id: str, user_token: str) -> str
 
 
 async def execute_turn(
-    conversation_id: str, user_input: str, workflow, user_token: str,
+    conversation_id: str,
+    user_input: str,
+    workflow,
+    user_token: str,
     current_location: Coordinate | None = None,
     user_timezone: str | None = None,
 ) -> dict:
@@ -88,7 +91,9 @@ async def execute_turn(
             "route": "",
             "intent": "",
             "flow_status": "",
-            "current_location": current_location.model_dump() if current_location else None,
+            "current_location": current_location.model_dump()
+            if current_location
+            else None,
             "user_timezone": user_timezone,
             "route_options": [],
             "weather_evidence": [],

@@ -83,7 +83,9 @@ def judge_node(state: GraphState, config=None) -> dict:
         }
     if state.get("intent") == "route" and state.get("route_decision"):
         selected_id = state["route_decision"].get("route_id")
-        if selected_id not in {route.get("route_id") for route in state.get("route_options", [])}:
+        if selected_id not in {
+            route.get("route_id") for route in state.get("route_options", [])
+        }:
             return {
                 "judge_status": "blocked",
                 "messages": [
@@ -115,7 +117,11 @@ def judge_node(state: GraphState, config=None) -> dict:
                         "origin": state.get("resolved_origin"),
                         "destination": state.get("resolved_destination"),
                         "routes": [
-                            {key: value for key, value in route.items() if key != "encoded_polyline"}
+                            {
+                                key: value
+                                for key, value in route.items()
+                                if key != "encoded_polyline"
+                            }
                             for route in state.get("route_options", [])
                         ],
                         "weather": state.get("weather_evidence", []),

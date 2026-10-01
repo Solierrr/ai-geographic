@@ -28,4 +28,8 @@ def decide_post_routes(state: GraphState) -> str:
 def decide_judge_retry(state: GraphState) -> str:
     if state.get("judge_status") != "retry":
         return "end"
-    return "specialist" if state.get("intent") == "route" and state.get("route_options") else "orchestrator"
+    return (
+        "specialist"
+        if state.get("intent") == "route" and state.get("route_options")
+        else "orchestrator"
+    )

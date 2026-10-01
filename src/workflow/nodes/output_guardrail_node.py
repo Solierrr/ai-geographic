@@ -85,9 +85,17 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
 
     workflow_steps = append_turn_agent(state, "output_guardrail")
     route_data = None
-    if final_text != FALLBACK_RESPONSE and state.get("intent") == "route" and state.get("route_decision"):
+    if (
+        final_text != FALLBACK_RESPONSE
+        and state.get("intent") == "route"
+        and state.get("route_decision")
+    ):
         selected = next(
-            (route for route in state.get("route_options", []) if route.get("route_id") == state["route_decision"].get("route_id")),
+            (
+                route
+                for route in state.get("route_options", [])
+                if route.get("route_id") == state["route_decision"].get("route_id")
+            ),
             None,
         )
         if selected:
@@ -105,7 +113,9 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
             AIMessage(
                 content=final_text,
                 additional_kwargs={
-                    "specialists_used": ["route_specialist"] if state.get("intent") == "route" and state.get("route_decision") else [],
+                    "specialists_used": ["route_specialist"]
+                    if state.get("intent") == "route" and state.get("route_decision")
+                    else [],
                     "workflow_steps": workflow_steps,
                 },
             ),
