@@ -26,7 +26,7 @@ O `ai-geographic` deve ajudar uma pessoa a ir de uma origem a um destino, consid
 | `src/infra/mcp/client.py` | Cliente MCP aponta para `mcp-database`, cujas tools não são de mapas/clima. | Não reutilizá-lo como se fornecesse Google Maps. Criar contrato próprio com o serviço de integração escolhido. |
 | `google-registry` | No código atual, só expõe a capacidade Solar. | Adicionar contratos/rotas de resolução de lugares, Routes e Weather **antes** de conectar `ai-geographic`, se esse serviço continuar sendo o concentrador Google. |
 
-O `GOOGLE_API_KEY` presente no `ai-geographic` é usado pelo LLM; a credencial Google Maps deve continuar restrita ao serviço integrador e ter nome/configuração próprios.
+As chaves de LLM ficam no `google-registry` e o `ai-geographic` as recebe pelo corretor; a credencial Google Maps deve continuar restrita ao serviço integrador e ter nome/configuração próprios.
 
 ## 3. Papéis e comunicação
 
