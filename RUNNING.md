@@ -10,10 +10,10 @@ Este repositório é Python. O processo local é sempre o mesmo: clonar, criar u
 
 ## Possíveis Impedimentos
 
-- **Python 3.12+ instalado localmente**, a mesma versão usada no `Dockerfile` (`python:latest`) — rodar fora do container exige essa versão instalada na máquina.
+- **Python 3.14+ instalado localmente**, exigido pela `solaria-lib` e usado no CI (o `Dockerfile` usa `python:latest`) — rodar fora do container exige essa versão instalada na máquina.
 - **Acesso ao Google Cloud (`gcloud auth login`)**, serviços que integram com GCP em runtime (Storage, Pub/Sub, Vertex AI) precisam de credenciais válidas localmente, já que em produção isso vem do manifesto do [Infra-gitops](https://github.com/Solierrr/infra-gitops).
 - **Secrets locais**, variáveis de ambiente equivalentes às injetadas em runtime pelo [Infisical](https://infisical.com) (chaves de API de LLM, strings de conexão de banco) precisam ser criadas manualmente em um `.env` local — sem elas, a aplicação sobe mas falha ao tentar se conectar em dependências externas.
-- **Google Maps Platform**, habilitar Places API (New), Routes API, Time Zone API e Weather API na conta Google Cloud, com faturamento/quotas adequados, e preencher `GOOGLE_MAPS_API_KEY` no `.env`. A chave `GOOGLE_API_KEY` é do modelo Gemini.
+- **Google Maps Platform**, habilitar Places API (New), Routes API, Time Zone API e Weather API na conta Google Cloud, com faturamento/quotas adequados, e preencher `GOOGLE_MAPS_API_KEY` no `.env`. As chaves de LLM (Gemini e Groq) ficam só no `google-registry`; o serviço recebe `REGISTRY_URL` e `REGISTRY_CONSUMER_TOKEN`.
 
 ## Instalação do Projeto
 
