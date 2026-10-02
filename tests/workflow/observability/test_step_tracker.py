@@ -6,7 +6,7 @@ import httpx
 from groq import APITimeoutError, RateLimitError
 from httpx import ConnectError, TimeoutException
 
-import src.core.config.model_pricing as model_pricing
+import ai_lib.llm.pricing as model_pricing
 import src.workflow.observability.step_tracker as step_tracker
 
 
