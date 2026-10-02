@@ -2,9 +2,9 @@ import asyncio
 import logging
 from uuid import uuid4
 
+from ai_lib.guardrails import anonymize_text
 from langchain_core.messages import HumanMessage
 
-from src.core.guardrails.anonymize import anonymize_text
 from src.core.security.jwt import decode_user_id
 from src.core.travel.models import Coordinate
 from src.infra.api_messenger.client import (

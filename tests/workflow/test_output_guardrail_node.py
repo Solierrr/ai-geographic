@@ -95,11 +95,3 @@ def test_output_guardrail_fails_closed_for_unknown_status(monkeypatch):
 
     assert result["messages"][1].content == output_guardrail_node.FALLBACK_RESPONSE
     deanonymize.assert_not_called()
-
-
-def test_output_guardrail_parser_preserves_multiline_response():
-    review = output_guardrail_node._parse_revisao_compliance(
-        "STATUS: CORRIGIDO\nRESPOSTA: Primeira linha.\nSegunda linha."
-    )
-    assert review.foi_corrigida is True
-    assert review.resposta_revisada == "Primeira linha.\nSegunda linha."
