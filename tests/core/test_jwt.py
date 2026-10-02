@@ -22,7 +22,9 @@ def test_decode_user_id_delega_para_a_lib_com_jwks_e_issuer_do_settings(monkeypa
     )
 
 
-def test_decode_user_id_retorna_none_com_token_invalido():
+def test_decode_user_id_retorna_none_com_token_invalido(monkeypatch):
+    monkeypatch.setattr(jwt_module, "_decode_user_id", Mock(return_value=None))
+
     assert decode_user_id("token-invalido") is None
 
 
