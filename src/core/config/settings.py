@@ -28,7 +28,9 @@ class Settings(BaseSettings):
     MCP_URL: str = "http://localhost:8001/mcp"
     MCP_API_KEY: str | None = None
 
-    REGISTRY_URL: str | None = None
+    REGISTRY_URL: str | None = Field(
+        None, validation_alias=AliasChoices("REGISTRY_URL", "GOOGLE_REGISTRY_URL")
+    )
     REGISTRY_CONSUMER_TOKEN: str | None = None
 
     GOOGLE_MAPS_API_KEY: str | None = None
