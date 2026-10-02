@@ -1,11 +1,9 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from ai_lib.llm import get_chat_model
 
-from src.core.config.settings import settings
+from src.core.llm.registry import registry_client
 
 
 def llm_gemini(model="gemini-2.5-flash", temperature=0.7):
-    return ChatGoogleGenerativeAI(
-        model=model,
-        temperature=temperature,
-        api_key=settings.GOOGLE_API_KEY,
+    return get_chat_model(
+        "gemini", model=model, temperature=temperature, client=registry_client()
     )
