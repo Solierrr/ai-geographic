@@ -7,17 +7,25 @@ from src.core.config.settings import settings
 from src.infra.database.mongo.indexes.user_memory_indexes import (
     ensure_user_memory_indexes,
 )
+from src.infra.external.google_registry import (
+    close_google_registry_client,
+    get_google_registry_client,
+)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await ensure_user_memory_indexes()
-    yield
+    get_google_registry_client()
+    try:
+        yield
+    finally:
+        await close_google_registry_client()
 
 
 app = FastAPI(
     title="ai-geographic API",
-    description="Assistente para localizar destinos e recomendar deslocamentos com dados de rota e clima.",
+    description="Assistente geográfico para endereços, fusos, potencial solar e deslocamentos.",
     version="0.1.0",
     lifespan=lifespan,
 )
