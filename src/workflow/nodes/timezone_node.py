@@ -73,7 +73,5 @@ async def timezone_node(state: GraphState, config=None) -> dict:
         **result,
         "flow_status": "respond",
         "timezone_result": timezone_result,
-        "messages": [
-            AIMessage(content=answer)
-        ],
+        "messages": [AIMessage(content=answer)],
     }

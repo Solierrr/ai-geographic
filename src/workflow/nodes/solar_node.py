@@ -52,7 +52,9 @@ def _solar_answer(data: SolarViability, language: str = "pt-BR") -> str:
     panel_details = []
     if data.panel_capacity_watts is not None:
         label = {"pt-BR": "potência", "en": "capacity", "es": "potencia"}[language]
-        panel_details.append(f"{label} {_number(data.panel_capacity_watts, language)} W")
+        panel_details.append(
+            f"{label} {_number(data.panel_capacity_watts, language)} W"
+        )
     if data.panel_width_meters is not None and data.panel_height_meters is not None:
         panel_details.append(
             f"{_number(data.panel_width_meters, language)} × {_number(data.panel_height_meters, language)} m"
@@ -65,9 +67,7 @@ def _solar_answer(data: SolarViability, language: str = "pt-BR") -> str:
         }[language]
         parts.append(prefix + " / ".join(panel_details) + ".")
     if data.panel_configs:
-        panel_word = {"pt-BR": "painéis", "en": "panels", "es": "paneles"}[
-            language
-        ]
+        panel_word = {"pt-BR": "painéis", "en": "panels", "es": "paneles"}[language]
         yearly_unit = {"pt-BR": "kWh/ano DC", "en": "DC kWh/year", "es": "kWh/año DC"}[
             language
         ]
@@ -115,9 +115,7 @@ async def solar_node(state: GraphState, config=None) -> dict:
             **result,
             "flow_status": "respond",
             "provider_issue": "solar_coverage_unavailable",
-            "messages": [
-                AIMessage(content=no_coverage)
-            ],
+            "messages": [AIMessage(content=no_coverage)],
         }
     except GoogleRegistryError as exc:
         unavailable = {
@@ -129,9 +127,7 @@ async def solar_node(state: GraphState, config=None) -> dict:
             **result,
             "flow_status": "respond",
             "provider_issue": exc.kind,
-            "messages": [
-                AIMessage(content=unavailable)
-            ],
+            "messages": [AIMessage(content=unavailable)],
         }
     return {
         **result,

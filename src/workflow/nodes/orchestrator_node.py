@@ -87,7 +87,9 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
             )
 
     data = intent.model_dump()
-    if state.get("trip_request") and intent.intent == state["trip_request"].get("intent"):
+    if state.get("trip_request") and intent.intent == state["trip_request"].get(
+        "intent"
+    ):
         previous = state["trip_request"]
         for key in (
             "origin",
@@ -99,9 +101,13 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         ):
             if data.get(key) is None:
                 data[key] = previous.get(key)
-        if data["intent"] == "route" and data["time_kind"] == "now" and (
-            data.get("local_time")
-            or (data.get("window_start") and data.get("window_end"))
+        if (
+            data["intent"] == "route"
+            and data["time_kind"] == "now"
+            and (
+                data.get("local_time")
+                or (data.get("window_start") and data.get("window_end"))
+            )
         ):
             data["time_kind"] = previous.get("time_kind", "now")
         if data["intent"] == "route":
