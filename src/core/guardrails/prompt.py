@@ -27,6 +27,8 @@ Categorias:
 APROVADO
 - Pedido para localizar um lugar específico ou planejar deslocamento de uma
   origem para um destino, considerando rota, horário e clima.
+- Pedido de fuso horário ou potencial solar de um endereço/localização
+  específica.
 
 REDIRECIONAR
 - Solicitação que exige avaliação profissional ou responsabilidade que o

@@ -1,16 +1,13 @@
-"""Adaptador das APIs Google Maps Platform usadas pelo fluxo de deslocamento."""
+"""Integrações locais temporárias de Routes e Weather do Google."""
 
 import math
 from datetime import datetime, timedelta, timezone
-from urllib.parse import quote
-from zoneinfo import ZoneInfo
 
 import httpx
 
 from src.core.config.settings import settings
 from src.core.travel.models import (
     Coordinate,
-    ResolvedPlace,
     RouteOption,
     WeatherEvidence,
 )
@@ -49,72 +46,6 @@ async def _request(method: str, url: str, **kwargs) -> dict:
     except httpx.TransportError as exc:
         raise GeographicProviderError("unavailable") from exc
     except ValueError as exc:
-        raise GeographicProviderError("invalid_response") from exc
-
-
-async def search_places(query: str) -> list[ResolvedPlace]:
-    payload = await _request(
-        "POST",
-        "https://places.googleapis.com/v1/places:searchText",
-        headers={
-            "X-Goog-Api-Key": _ensure_key(),
-            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
-        },
-        json={"textQuery": query, "languageCode": "pt-BR", "pageSize": 3},
-    )
-    places = []
-    for item in payload.get("places", []):
-        try:
-            if not item.get("id"):
-                continue
-            places.append(
-                ResolvedPlace(
-                    label=item["displayName"]["text"],
-                    address=item["formattedAddress"],
-                    coordinate=Coordinate(**item["location"]),
-                    place_id=item.get("id"),
-                )
-            )
-        except (KeyError, TypeError, ValueError):
-            continue
-    return places
-
-
-async def place_by_id(place_id: str) -> ResolvedPlace:
-    payload = await _request(
-        "GET",
-        f"https://places.googleapis.com/v1/places/{quote(place_id, safe='')}",
-        headers={
-            "X-Goog-Api-Key": _ensure_key(),
-            "X-Goog-FieldMask": "id,displayName,formattedAddress,location",
-        },
-    )
-    try:
-        return ResolvedPlace(
-            label=payload["displayName"]["text"],
-            address=payload["formattedAddress"],
-            coordinate=Coordinate(**payload["location"]),
-            place_id=payload["id"],
-        )
-    except (KeyError, TypeError, ValueError) as exc:
-        raise GeographicProviderError("invalid_response") from exc
-
-
-async def timezone_for(coordinate: Coordinate, at: datetime) -> ZoneInfo:
-    payload = await _request(
-        "GET",
-        "https://maps.googleapis.com/maps/api/timezone/json",
-        params={
-            "location": f"{coordinate.latitude},{coordinate.longitude}",
-            "timestamp": int(at.timestamp()),
-            "key": _ensure_key(),
-        },
-    )
-    if payload.get("status") != "OK":
-        raise GeographicProviderError("unavailable")
-    try:
-        return ZoneInfo(payload["timeZoneId"])
-    except (KeyError, TypeError, ValueError) as exc:
         raise GeographicProviderError("invalid_response") from exc
 
 

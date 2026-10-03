@@ -4,11 +4,10 @@ from zoneinfo import ZoneInfo
 from langchain_core.messages import AIMessage
 
 from src.core.travel.models import ResolvedPlace
-from src.infra.external.google_geographic import (
-    GeographicProviderError,
-    compute_routes,
-    timezone_for,
-)
+from src.infra.external.google_geographic import GeographicProviderError
+from src.infra.external.google_registry.errors import GoogleRegistryError
+from src.infra.external.google_registry.geo import timezone_for
+from src.infra.external.routes_provider import compute_routes
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent
 
@@ -192,7 +191,7 @@ async def routes_node(state: GraphState, config=None) -> dict:
                 )
             ],
         }
-    except GeographicProviderError as exc:
+    except (GeographicProviderError, GoogleRegistryError) as exc:
         return {
             **result,
             "flow_status": "respond",

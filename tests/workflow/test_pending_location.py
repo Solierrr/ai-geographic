@@ -51,7 +51,7 @@ def test_pending_request_is_available_to_input_guardrail(monkeypatch):
         "trip_request": {"intent": "route"},
     })
     assert result["route"] == "proceed"
-    assert "solicitação de deslocamento/localização pendente" in model.invoke.call_args.args[0][0].content
+    assert "solicitação geográfica pendente" in model.invoke.call_args.args[0][0].content
 
 
 def test_google_results_are_not_saved_in_checkpoint():
@@ -63,6 +63,8 @@ def test_google_results_are_not_saved_in_checkpoint():
             "weather_evidence": [{"condition": "provider-weather"}],
             "resolved_destination": {"address": "provider-address"},
             "route_data": {"encoded_polyline": "provider-polyline"},
+            "solar_result": {"usable_roof_area_m2": 42.5},
+            "timezone_result": {"timezone_id": "America/Sao_Paulo"},
             "location_candidates": [{"place_id": "allowed-place-id"}],
         }
 
@@ -74,5 +76,12 @@ def test_google_results_are_not_saved_in_checkpoint():
     assert result["route_options"][0]["encoded_polyline"] == "provider-polyline"
     snapshot = workflow.get_state(config).values
     assert snapshot["location_candidates"] == [{"place_id": "allowed-place-id"}]
-    for field in ("route_options", "weather_evidence", "resolved_destination", "route_data"):
+    for field in (
+        "route_options",
+        "weather_evidence",
+        "resolved_destination",
+        "route_data",
+        "solar_result",
+        "timezone_result",
+    ):
         assert field not in snapshot

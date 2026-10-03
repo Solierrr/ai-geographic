@@ -97,6 +97,8 @@ async def execute_turn(
             "user_timezone": user_timezone,
             "route_options": [],
             "weather_evidence": [],
+            "solar_result": {},
+            "timezone_result": {},
             "route_decision": {},
             "route_data": None,
             "output_status": "",
@@ -128,7 +130,12 @@ async def execute_turn(
         api_conversation_id, anonymized_assistant_response, audit_metadata
     )
 
-    if user_id and final_state.get("intent") not in {"route", "locate"}:
+    if user_id and final_state.get("intent") not in {
+        "route",
+        "locate",
+        "solar",
+        "timezone",
+    }:
         ultima_troca = f"Usuário: {user_input}\nAssistente: {final_message.content}"
         _agendar_atualizacao_memoria(user_id, fatos_existentes, ultima_troca)
 

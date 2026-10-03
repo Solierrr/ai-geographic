@@ -25,7 +25,7 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
     if state.get("trip_request"):
         messages_with_context.append(
             HumanMessage(
-                content="Solicitação de deslocamento pendente: "
+                content="Solicitação geográfica pendente: "
                 + json.dumps(state["trip_request"], ensure_ascii=False)
             )
         )
@@ -80,11 +80,14 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         except (ValueError, TypeError, ValidationError, AttributeError):
             intent = TripIntent(
                 intent="clarify",
-                clarification="Você quer localizar um lugar ou planejar uma rota?",
+                clarification=(
+                    "Você quer localizar um endereço, consultar um fuso, "
+                    "analisar potencial solar ou planejar uma rota?"
+                ),
             )
 
     data = intent.model_dump()
-    if state.get("trip_request") and intent.intent == "route":
+    if state.get("trip_request") and intent.intent == state["trip_request"].get("intent"):
         previous = state["trip_request"]
         for key in (
             "origin",
@@ -96,18 +99,19 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         ):
             if data.get(key) is None:
                 data[key] = previous.get(key)
-        if data["time_kind"] == "now" and (
+        if data["intent"] == "route" and data["time_kind"] == "now" and (
             data.get("local_time")
             or (data.get("window_start") and data.get("window_end"))
         ):
             data["time_kind"] = previous.get("time_kind", "now")
-        for key in (
-            "has_waypoints",
-            "needs_hazard_avoidance",
-            "avoid_tolls",
-            "avoid_highways",
-        ):
-            data[key] = data[key] or previous.get(key, False)
+        if data["intent"] == "route":
+            for key in (
+                "has_waypoints",
+                "needs_hazard_avoidance",
+                "avoid_tolls",
+                "avoid_highways",
+            ):
+                data[key] = data[key] or previous.get(key, False)
     if data.get("mode") == "WALK":
         data["avoid_tolls"] = False
         data["avoid_highways"] = False
@@ -121,7 +125,7 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         not data.get("selected_place_id")
         and bool(candidates)
         and (
-            data["intent"] not in {"route", "locate"}
+            data["intent"] not in {"route", "locate", "timezone", "solar"}
             or data.get("destination") != previous_request.get("destination")
             or data.get("origin") != previous_request.get("origin")
         )
@@ -133,6 +137,8 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         "flow_status": "resolve",
         "route_options": [],
         "weather_evidence": [],
+        "solar_result": {},
+        "timezone_result": {},
         "route_decision": {},
         "provider_issue": None,
         "resolved_origin": {},
@@ -147,7 +153,10 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         result["trip_request"] = {}
         result["messages"] = [
             AIMessage(
-                content="Posso ajudar a localizar um destino específico ou planejar um deslocamento. Informe de onde vai sair e para onde quer ir."
+                content=(
+                    "Posso ajudar com endereços, fusos horários, potencial solar "
+                    "ou planejamento de deslocamentos."
+                )
             )
         ]
     elif data["intent"] == "clarify":
@@ -156,7 +165,10 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         result["messages"] = [
             AIMessage(
                 content=data["clarification"]
-                or "Você quer localizar um lugar ou planejar uma rota?"
+                or (
+                    "Você quer localizar um endereço, consultar um fuso, "
+                    "analisar potencial solar ou planejar uma rota?"
+                )
             )
         ]
     elif data.get("has_waypoints"):
@@ -175,9 +187,35 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
                 content="Não tenho dados para verificar alagamentos, bloqueios, segurança ou acessibilidade de toda a via. Posso sugerir uma rota geral, sem essa garantia."
             )
         ]
-    elif not data["destination"]:
+    elif not data["destination"] and (
+        data["intent"] == "route" or not state.get("current_location")
+    ):
         result["flow_status"] = "respond"
-        result["messages"] = [AIMessage(content="Para onde você quer ir?")]
+        questions = {
+            "solar": {
+                "pt-BR": "Qual é o endereço para a análise solar?",
+                "en": "What address should I use for the solar analysis?",
+                "es": "¿Qué dirección debo usar para el análisis solar?",
+            },
+            "timezone": {
+                "pt-BR": "De qual endereço ou localização você quer saber o fuso?",
+                "en": "Which address or location do you want the time zone for?",
+                "es": "¿De qué dirección o ubicación quieres saber la zona horaria?",
+            },
+            "locate": {
+                "pt-BR": "Qual endereço ou lugar você quer localizar?",
+                "en": "Which address or place do you want to locate?",
+                "es": "¿Qué dirección o lugar quieres localizar?",
+            },
+            "route": {
+                "pt-BR": "Para onde você quer ir?",
+                "en": "Where do you want to go?",
+                "es": "¿Adónde quieres ir?",
+            },
+        }
+        result["messages"] = [
+            AIMessage(content=questions[data["intent"]][data["response_language"]])
+        ]
     elif (
         data["intent"] == "route"
         and not data["origin"]

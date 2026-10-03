@@ -18,7 +18,8 @@ def decide_post_orchestrator(state: GraphState) -> str:
 
 
 def decide_post_location(state: GraphState) -> str:
-    return "routes" if state.get("flow_status") == "routes" else "respond"
+    status = state.get("flow_status")
+    return status if status in {"routes", "solar", "timezone"} else "respond"
 
 
 def decide_post_routes(state: GraphState) -> str:

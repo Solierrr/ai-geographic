@@ -17,6 +17,8 @@ class GraphState(MessagesState):
     destination_timezone: Annotated[str, UntrackedValue]
     route_options: Annotated[list[dict], UntrackedValue]
     weather_evidence: Annotated[list[dict], UntrackedValue]
+    solar_result: Annotated[dict, UntrackedValue]
+    timezone_result: Annotated[dict, UntrackedValue]
     provider_issue: str | None
     route_decision: Annotated[dict, UntrackedValue]
     route_data: Annotated[dict | None, UntrackedValue]

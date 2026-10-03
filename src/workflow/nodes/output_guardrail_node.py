@@ -41,6 +41,13 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
         final_text = FALLBACK_RESPONSE
 
     workflow_steps = append_turn_agent(state, "output_guardrail")
+    specialists = []
+    if state.get("intent") == "route" and state.get("route_decision"):
+        specialists = ["route_specialist"]
+    elif state.get("intent") == "solar" and state.get("solar_result"):
+        specialists = ["solar"]
+    elif state.get("intent") == "timezone" and state.get("timezone_result"):
+        specialists = ["timezone"]
     route_data = None
     if (
         final_text != FALLBACK_RESPONSE
@@ -70,9 +77,7 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
             AIMessage(
                 content=final_text,
                 additional_kwargs={
-                    "specialists_used": ["route_specialist"]
-                    if state.get("intent") == "route" and state.get("route_decision")
-                    else [],
+                    "specialists_used": specialists,
                     "workflow_steps": workflow_steps,
                 },
             ),
