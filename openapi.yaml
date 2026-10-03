@@ -1,8 +1,7 @@
 openapi: 3.1.0
 info:
   title: ai-geographic API
-  description: Assistente para localizar destinos e recomendar deslocamentos com dados
-    de rota e clima.
+  description: Assistente para endereços, fusos, potencial solar e deslocamentos.
   version: 0.1.0
 paths:
   /chat:
