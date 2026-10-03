@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 from langchain_core.messages import AIMessage
 
-import src.workflow.runner as runner
+from src.workflow import runner
 
 
 def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypatch):

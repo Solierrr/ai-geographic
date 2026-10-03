@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.infra.database.mongo.schemas.conversation_schema import (
     ConversationSchema,
@@ -7,8 +7,8 @@ from src.infra.database.mongo.schemas.message_schema import MessageSchema
 
 
 def test_conversation_schema_accepts_expected_fields():
-    started_at = datetime(2026, 7, 1, 10, 0, 0)
-    last_interaction_at = datetime(2026, 7, 1, 10, 5, 0)
+    started_at = datetime(2026, 7, 1, 10, 0, 0, tzinfo=timezone.utc)
+    last_interaction_at = datetime(2026, 7, 1, 10, 5, 0, tzinfo=timezone.utc)
 
     conversation = ConversationSchema(
         conversation_id="conv-1",
@@ -38,15 +38,15 @@ def test_conversation_schema_accepts_user_details():
         user_details={"company": "ExemploCorp"},
         active_agent="orchestrator",
         status="active",
-        started_at=datetime(2026, 7, 1, 10, 0, 0),
-        last_interaction_at=datetime(2026, 7, 1, 10, 5, 0),
+        started_at=datetime(2026, 7, 1, 10, 0, 0, tzinfo=timezone.utc),
+        last_interaction_at=datetime(2026, 7, 1, 10, 5, 0, tzinfo=timezone.utc),
     )
 
     assert conversation.user_details == {"company": "ExemploCorp"}
 
 
 def test_message_schema_defaults_optional_fields():
-    timestamp = datetime(2026, 7, 1, 10, 0, 0)
+    timestamp = datetime(2026, 7, 1, 10, 0, 0, tzinfo=timezone.utc)
 
     message = MessageSchema(
         conversation_id="conv-1",
@@ -60,7 +60,7 @@ def test_message_schema_defaults_optional_fields():
 
 
 def test_message_schema_accepts_agent_and_metadata():
-    timestamp = datetime(2026, 7, 1, 10, 0, 0)
+    timestamp = datetime(2026, 7, 1, 10, 0, 0, tzinfo=timezone.utc)
 
     message = MessageSchema(
         conversation_id="conv-1",
