@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from src.core.travel.models import ResolvedPlace, RouteOption
 from src.core.travel.polyline import midpoint
-from src.infra.external.google_geographic import hourly_weather
+from src.infra.external.weather_provider import hourly_weather
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent
 

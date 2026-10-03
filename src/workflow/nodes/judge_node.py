@@ -92,6 +92,8 @@ def judge_node(state: GraphState, config=None) -> dict:
                             for route in state.get("route_options", [])
                         ],
                         "weather": state.get("weather_evidence", []),
+                        "solar": state.get("solar_result", {}),
+                        "timezone": state.get("timezone_result", {}),
                         "decision": state.get("route_decision"),
                     },
                     ensure_ascii=False,
@@ -117,7 +119,8 @@ def judge_node(state: GraphState, config=None) -> dict:
             "turn_agents": append_turn_agent(state, "judge_approved"),
         }
         if state.get("route_decision") or (
-            state.get("intent") == "locate" and state.get("resolved_destination")
+            state.get("intent") in {"locate", "solar", "timezone"}
+            and state.get("resolved_destination")
         ):
             result["trip_request"] = {}
             result["location_candidates"] = []

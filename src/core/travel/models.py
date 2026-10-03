@@ -10,7 +10,10 @@ class Coordinate(BaseModel):
 
 
 class TripIntent(BaseModel):
-    intent: Literal["route", "locate", "clarify", "out_of_scope"]
+    intent: Literal[
+        "route", "locate", "timezone", "solar", "clarify", "out_of_scope"
+    ]
+    response_language: Literal["pt-BR", "en", "es"] = "pt-BR"
     origin: str | None = None
     destination: str | None = None
     mode: Literal["DRIVE", "WALK", "TRANSIT", "BICYCLE", "OTHER"] | None = None
@@ -63,4 +66,3 @@ class RouteDecision(BaseModel):
     route_id: str
     rationale: Literal["shortest_time", "user_preference", "weather"]
     weather_used: bool = False
-

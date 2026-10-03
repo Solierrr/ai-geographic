@@ -10,33 +10,14 @@ from src.core.travel.models import Coordinate
 from src.infra.external.google_geographic import (
     compute_routes,
     hourly_weather,
-    place_by_id,
-    search_places,
 )
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_places_and_routes_are_parsed_from_google(monkeypatch):
+async def test_routes_are_still_parsed_directly_from_google(monkeypatch):
     monkeypatch.setattr(settings, "GOOGLE_MAPS_API_KEY", "test-key")
-    respx.post("https://places.googleapis.com/v1/places:searchText").mock(
-        return_value=Response(200, json={"places": [{
-            "id": "p1",
-            "displayName": {"text": "Parque"},
-            "formattedAddress": "São Paulo",
-            "location": {"latitude": -23.5, "longitude": -46.6},
-        }]})
-    )
-    places = await search_places("Parque")
-    assert places[0].place_id == "p1"
-    respx.get("https://places.googleapis.com/v1/places/p1").mock(
-        return_value=Response(200, json={
-            "id": "p1", "displayName": {"text": "Parque"},
-            "formattedAddress": "São Paulo",
-            "location": {"latitude": -23.5, "longitude": -46.6},
-        })
-    )
-    assert (await place_by_id("p1")).place_id == "p1"
+    origin = Coordinate(latitude=-23.5, longitude=-46.6)
     respx.post("https://routes.googleapis.com/directions/v2:computeRoutes").mock(
         return_value=Response(200, json={"routes": [{
             "duration": "900s", "distanceMeters": 5000,
@@ -44,12 +25,12 @@ async def test_places_and_routes_are_parsed_from_google(monkeypatch):
         }]})
     )
     at = datetime.now(timezone.utc) + timedelta(hours=1)
-    routes = await compute_routes(places[0].coordinate, Coordinate(latitude=-23.6, longitude=-46.7), "DRIVE", at)
+    routes = await compute_routes(origin, Coordinate(latitude=-23.6, longitude=-46.7), "DRIVE", at)
     assert routes[0].duration_seconds == 900
     assert routes[0].arrival_at == at + timedelta(minutes=15)
 
     await compute_routes(
-        places[0].coordinate,
+        origin,
         Coordinate(latitude=-23.6, longitude=-46.7),
         "DRIVE", at, modifiers={"avoidTolls": True},
     )

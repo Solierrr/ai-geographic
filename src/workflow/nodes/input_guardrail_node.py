@@ -19,8 +19,8 @@ OUT_OF_SCOPE_RESPONSE = (
 )
 
 PENDING_TRIP_CONTEXT = (
-    "Há uma solicitação de deslocamento/localização pendente nesta conversa. "
-    "Uma resposta curta que complete origem, destino, meio de transporte, "
+    "Há uma solicitação geográfica pendente nesta conversa. "
+    "Uma resposta curta que complete endereço, origem, destino, meio de transporte, "
     "horário ou escolha um dos lugares mostrados pode ser APROVADO. "
     "Continue aplicando as regras de segurança e escopo normalmente."
 )

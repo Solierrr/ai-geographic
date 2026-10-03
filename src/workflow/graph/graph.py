@@ -15,7 +15,9 @@ from src.workflow.nodes.orchestrator_node import orchestrator_node
 from src.workflow.nodes.output_guardrail_node import output_guardrail_node
 from src.workflow.nodes.route_specialist_node import route_specialist_node
 from src.workflow.nodes.routes_node import routes_node
+from src.workflow.nodes.solar_node import solar_node
 from src.workflow.nodes.summary_node import condense_history_node
+from src.workflow.nodes.timezone_node import timezone_node
 from src.workflow.nodes.weather_node import weather_node
 from src.workflow.state import GraphState
 
@@ -27,6 +29,8 @@ graph.add_node("orchestrator", orchestrator_node)
 graph.add_node("location", resolve_locations_node)
 graph.add_node("routes", routes_node)
 graph.add_node("weather", weather_node)
+graph.add_node("solar", solar_node)
+graph.add_node("timezone", timezone_node)
 graph.add_node("route_specialist", route_specialist_node)
 graph.add_node("judge", judge_node)
 graph.add_node("output_guardrail", output_guardrail_node)
@@ -48,8 +52,15 @@ graph.add_conditional_edges(
 graph.add_conditional_edges(
     "location",
     decide_post_location,
-    {"routes": "routes", "respond": "output_guardrail"},
+    {
+        "routes": "routes",
+        "solar": "solar",
+        "timezone": "timezone",
+        "respond": "output_guardrail",
+    },
 )
+graph.add_edge("solar", "output_guardrail")
+graph.add_edge("timezone", "output_guardrail")
 graph.add_conditional_edges(
     "routes",
     decide_post_routes,
