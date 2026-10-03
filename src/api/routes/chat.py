@@ -1,25 +1,33 @@
-from fastapi import APIRouter, HTTPException, Request
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.api.schemas.chat import ChatRequest, ChatResponse
 from src.workflow.runner import execute_turn
 
 router = APIRouter(tags=["chat"])
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.post(
-    "/chat", response_model=ChatResponse,
+    "/chat",
+    response_model=ChatResponse,
     responses={401: {"description": "Bearer token ausente ou inválido."}},
 )
 async def conversar(
-    requisicao: ChatRequest, request: Request
+    requisicao: ChatRequest,
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(bearer_scheme),
+    ],
 ) -> ChatResponse:
     """Recebe uma mensagem do usuário e devolve a resposta do assistente."""
-    authorization = request.headers.get("authorization")
-    if not authorization or not authorization.startswith("Bearer "):
+    if credentials is None or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=401, detail="Authorization header deve ser 'Bearer <token>'"
         )
-    user_token = authorization.removeprefix("Bearer ")
+    user_token = credentials.credentials
 
     from src.workflow.graph.graph import compiled_app
 
@@ -40,5 +48,7 @@ async def conversar(
         workflow_steps=metadata.get(
             "workflow_steps", final_state.get("turn_agents", [])
         ),
-        route_data=final_state.get("route_data") if final_state.get("judge_status") == "approved" else None,
+        route_data=final_state.get("route_data")
+        if final_state.get("judge_status") == "approved"
+        else None,
     )

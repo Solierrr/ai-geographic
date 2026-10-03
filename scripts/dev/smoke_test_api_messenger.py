@@ -16,7 +16,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.core.config.settings import settings
-from src.infra.api_messenger.client import criar_conversa_chatbot, enviar_mensagem_chatbot
+from src.infra.api_messenger.client import (
+    criar_conversa_chatbot,
+    enviar_mensagem_chatbot,
+)
 
 
 async def main(user_token: str) -> None:
