@@ -7,6 +7,10 @@ from src.core.config.settings import settings
 
 @lru_cache(maxsize=1)
 def registry_client() -> RegistryClient:
-    if not settings.REGISTRY_URL or not settings.REGISTRY_CONSUMER_TOKEN:
-        raise RegistryError("REGISTRY_URL and REGISTRY_CONSUMER_TOKEN must be set")
-    return RegistryClient(settings.REGISTRY_URL, settings.REGISTRY_CONSUMER_TOKEN)
+    if not settings.GOOGLE_REGISTRY_URL or not settings.REGISTRY_CONSUMER_TOKEN:
+        raise RegistryError(
+            "GOOGLE_REGISTRY_URL and REGISTRY_CONSUMER_TOKEN must be set"
+        )
+    return RegistryClient(
+        settings.GOOGLE_REGISTRY_URL, settings.REGISTRY_CONSUMER_TOKEN
+    )

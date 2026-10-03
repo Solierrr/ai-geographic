@@ -26,10 +26,9 @@ async def test_connect_redis_cria_cliente_e_executa_ping(monkeypatch):
     client.ping.assert_awaited_once()
 
     redis_factory.assert_called_once_with(
-        host=redis_client.settings.UPSTASH_REDIS_HOST,
-        port=redis_client.settings.UPSTASH_REDIS_PORT,
-        username=redis_client.settings.UPSTASH_REDIS_USERNAME,
-        password=redis_client.settings.UPSTASH_REDIS_PASSWORD,
+        host=redis_client.settings.UPSTASH_AGENTS_HOST,
+        port=redis_client.settings.UPSTASH_AGENTS_PORT,
+        username=redis_client.settings.UPSTASH_AGENTS_USERNAME,
         ssl=True,
         decode_responses=True,
     )

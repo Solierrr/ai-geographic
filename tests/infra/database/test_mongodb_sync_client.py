@@ -7,7 +7,7 @@ def test_get_mongodb_client_usa_uri_local_sem_tls(monkeypatch):
         mongodb_sync_client, "MongoClient", lambda *a, **kw: chamadas.append((a, kw))
     )
     monkeypatch.setattr(
-        mongodb_sync_client.settings, "MONGO_URI", "mongodb://test-host:27017"
+        mongodb_sync_client.settings, "DB_MONGO_URI", "mongodb://test-host:27017"
     )
 
     mongodb_sync_client.get_mongodb_client()
@@ -24,7 +24,7 @@ def test_get_mongodb_client_usa_ca_para_atlas(monkeypatch):
     )
     monkeypatch.setattr(
         mongodb_sync_client.settings,
-        "MONGO_URI",
+        "DB_MONGO_URI",
         "mongodb+srv://test-host.example",
     )
 

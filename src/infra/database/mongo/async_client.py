@@ -9,5 +9,8 @@ _client: AsyncMongoClient | None = None
 def get_async_mongodb_client() -> AsyncMongoClient:
     global _client
     if _client is None:
-        _client = AsyncMongoClient(settings.MONGO_URI, tlsCAFile=certifi.where())
+        kwargs = {}
+        if settings.DB_MONGO_URI.startswith("mongodb+srv://"):
+            kwargs["tlsCAFile"] = certifi.where()
+        _client = AsyncMongoClient(settings.DB_MONGO_URI, **kwargs)
     return _client

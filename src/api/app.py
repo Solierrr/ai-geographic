@@ -29,8 +29,8 @@ app.include_router(chat.router)
 def health() -> dict:
     """Responde 'ok' se o servidor subiu, listando configuração ausente."""
     missing = []
-    if not settings.REGISTRY_URL:
-        missing.append("REGISTRY_URL")
+    if not settings.GOOGLE_REGISTRY_URL:
+        missing.append("GOOGLE_REGISTRY_URL")
     if not settings.REGISTRY_CONSUMER_TOKEN:
         missing.append("REGISTRY_CONSUMER_TOKEN")
     if not settings.GOOGLE_MAPS_API_KEY:

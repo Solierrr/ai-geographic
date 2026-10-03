@@ -8,7 +8,9 @@ from src.core.security.jwt import decode_user_id
 
 @pytest.fixture(autouse=True)
 def _jwt_settings(monkeypatch):
-    monkeypatch.setattr(jwt_module.settings, "JWT_JWKS_URL", "http://jwks.test/keys")
+    monkeypatch.setattr(
+        jwt_module.settings, "JWT_JWK_SET_URI", "http://jwks.test/keys"
+    )
     monkeypatch.setattr(jwt_module.settings, "JWT_ISSUER", "solaria-auth")
 
 
@@ -29,7 +31,7 @@ def test_decode_user_id_retorna_none_com_token_invalido(monkeypatch):
 
 
 def test_decode_user_id_retorna_none_sem_jwks_url(monkeypatch):
-    monkeypatch.setattr(jwt_module.settings, "JWT_JWKS_URL", None)
+    monkeypatch.setattr(jwt_module.settings, "JWT_JWK_SET_URI", None)
     decode = Mock()
     monkeypatch.setattr(jwt_module, "_decode_user_id", decode)
 
