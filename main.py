@@ -10,7 +10,9 @@ async def run_chat():
     from src.workflow.graph.graph import compiled_app
 
     if not settings.TEST_USER_TOKEN:
-        print("Defina TEST_USER_TOKEN no .env com um JWT válido do api-auth antes de rodar.")
+        print(
+            "Defina TEST_USER_TOKEN no .env com um JWT válido do api-auth antes de rodar."
+        )
         return
 
     conversation_id = str(uuid4())
