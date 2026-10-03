@@ -12,19 +12,22 @@ o especialista de rotas decide com dados consultados e o juiz revê a resposta.
 </p>
 
 - Fluxo LangGraph (`src/workflow/graph/graph.py`): `input_guardrail` →
-  `condense_memory` → `orchestrator` → localização → rotas → clima →
-  `route_specialist` → `output_guardrail` → `judge`. Casos de esclarecimento,
-  localização simples e fora do escopo pulam as consultas desnecessárias.
+  `condense_memory` → `orchestrator` → resolução da localização → capability
+  (`routes`/`weather`, `timezone` ou `solar`) → `output_guardrail` → `judge`.
+  Casos de esclarecimento, localização simples e fora do escopo pulam as
+  consultas desnecessárias.
 - Orquestrador, especialista e juiz compartilham o estado tipado do grafo.
   Localização, rotas e clima são etapas de ferramenta, não agentes LLM extras.
   A revisão pode solicitar uma nova tentativa; depois do limite, bloqueia.
-- Resultados completos de Maps/Weather e a geometria da rota usam canais
-  não persistidos do LangGraph. Somente IDs de lugares candidatos ficam no
+- Resultados completos de Maps/Weather/Registry, coordenadas resolvidas e a
+  geometria da rota usam canais não persistidos do LangGraph. Somente IDs de lugares candidatos ficam no
   estado para escolhas como “o primeiro”. Mensagens da conversa continuam no
   checkpointer e no serviço de mensagens conforme a retenção configurada.
-- O adaptador `src/infra/external/google_geographic.py` chama Places Text
-  Search/Details, Routes, Time Zone e Weather. `GOOGLE_MAPS_API_KEY` é
-  separada da chave do modelo Gemini.
+- `src/infra/external/google_registry/` consome Address, Geo e Solar por DTOs
+  tipados e traduz erros do serviço. O cliente HTTP é reutilizado e fechado
+  no lifespan. Routes e Weather permanecem temporariamente locais em
+  `google_geographic.py`, atrás de contratos estáveis. `GOOGLE_MAPS_API_KEY`
+  continua necessária apenas para essas duas integrações locais.
 - Integrações de infraestrutura ficam em `src/infra/` (Mongo, Redis, MCP,
   api-messenger); nenhuma delas depende do domínio específico do assistente.
 - Autenticação via JWT emitido pelo `api-auth` (`src/core/security/jwt.py`).

@@ -1,7 +1,9 @@
 # ai-geographic
 
-API de um assistente para localizar destinos e sugerir deslocamentos com
-dados do Google Maps Platform e previsão do tempo. O fluxo pede origem,
+API de um assistente para localizar endereços, consultar fusos, analisar
+potencial solar e sugerir deslocamentos com dados geográficos. Address, Geo e
+Solar são consumidos pelo `google-registry`; Routes e Weather continuam locais
+temporariamente. O fluxo pede origem,
 destino, modo ou horário quando necessário, consulta as APIs e só recomenda
 uma rota apoiada nos resultados recebidos. Pedidos de catálogo, como listar
 pizzarias, ficam fora do escopo.
