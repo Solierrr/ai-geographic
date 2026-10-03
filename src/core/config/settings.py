@@ -1,22 +1,19 @@
-from pydantic import AliasChoices, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    MONGO_URI: str = Field(
-        "mongodb://localhost:27017",
-        validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI"),
-    )
+    DB_MONGO_URI: str = "mongodb://localhost:27017"
     CHECKPOINT_TTL_DIAS: int = 30
 
-    UPSTASH_REDIS_HOST: str | None = None
-    UPSTASH_REDIS_PORT: int = 6379
-    UPSTASH_REDIS_USERNAME: str = "default"
-    UPSTASH_REDIS_PASSWORD: str | None = None
+    UPSTASH_AGENTS_HOST: str | None = None
+    UPSTASH_AGENTS_PORT: int = 6379
+    UPSTASH_AGENTS_USERNAME: str = "default"
 
     API_MESSENGER_URL: str | None = None
+    SERVICE_CLIENT_SECRET: str | None = None
 
-    JWT_JWKS_URL: str | None = None
+    JWT_JWK_SET_URI: str | None = None
     JWT_ISSUER: str | None = None
 
     ENVIRONMENT: str = "LOCAL"
@@ -28,9 +25,8 @@ class Settings(BaseSettings):
     MCP_URL: str = "http://localhost:8001/mcp"
     MCP_API_KEY: str | None = None
 
-    REGISTRY_URL: str | None = Field(
-        None, validation_alias=AliasChoices("REGISTRY_URL", "GOOGLE_REGISTRY_URL")
-    )
+    GOOGLE_REGISTRY_URL: str = "http://localhost:8010"
+    GOOGLE_REGISTRY_TIMEOUT_SECONDS: float = Field(default=10.0, gt=0)
     REGISTRY_CONSUMER_TOKEN: str | None = None
 
     GOOGLE_MAPS_API_KEY: str | None = None

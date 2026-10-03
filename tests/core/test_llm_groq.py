@@ -15,7 +15,7 @@ MODELOS_DESCONTINUADOS_PELO_GROQ = {
 
 @pytest.fixture(autouse=True)
 def registry_settings(monkeypatch):
-    monkeypatch.setattr(settings, "REGISTRY_URL", "http://registry.test")
+    monkeypatch.setattr(settings, "GOOGLE_REGISTRY_URL", "http://registry.test")
     monkeypatch.setattr(settings, "REGISTRY_CONSUMER_TOKEN", "token-de-teste")
     registry_module.registry_client.cache_clear()
     yield
@@ -51,7 +51,7 @@ def test_gemini_usa_o_corretor_e_o_modelo_padrao():
 
 
 def test_sem_configuracao_do_registry_falha_na_hora(monkeypatch):
-    monkeypatch.setattr(settings, "REGISTRY_URL", None)
+    monkeypatch.setattr(settings, "GOOGLE_REGISTRY_URL", None)
     registry_module.registry_client.cache_clear()
 
     with pytest.raises(RegistryError):

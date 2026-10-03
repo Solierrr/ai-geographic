@@ -10,10 +10,9 @@ async def connect_redis() -> Redis:  # Se a conexão funcionar, retorna um objet
 
     if _redis_client is None:  # Se não houver um client Redis
         client = Redis(
-            host=settings.UPSTASH_REDIS_HOST,
-            port=settings.UPSTASH_REDIS_PORT,
-            username=settings.UPSTASH_REDIS_USERNAME,
-            password=settings.UPSTASH_REDIS_PASSWORD,
+            host=settings.UPSTASH_AGENTS_HOST,
+            port=settings.UPSTASH_AGENTS_PORT,
+            username=settings.UPSTASH_AGENTS_USERNAME,
             ssl=True,
             decode_responses=True,
         )
