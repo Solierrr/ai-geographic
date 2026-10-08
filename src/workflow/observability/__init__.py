@@ -1,1 +1,0 @@
-"""Observabilidade granular do workflow."""
