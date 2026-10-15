@@ -11,7 +11,7 @@ jobs:
     with:
       environment: QA
       check: http
-      url: https://TODO-preencher-apos-criar-o-servico-render-qa.onrender.com
+      url: https://ai-geographic.onrender.com
 
   production:
     permissions:
