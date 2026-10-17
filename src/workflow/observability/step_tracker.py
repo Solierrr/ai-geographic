@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from groq import APITimeoutError, RateLimitError
 from httpx import ConnectError, TimeoutException
@@ -51,7 +51,7 @@ class StepTracker(AsyncCallbackHandler):
             "conversationId": self.conversation_id,
             "node": node,
             "stepOrder": self._next_order(),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             **doc,
         }
         try:

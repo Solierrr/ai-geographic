@@ -30,7 +30,9 @@ def health() -> dict:
     """Responde 'ok' se o servidor subiu, listando configuração ausente."""
     configured = key_client().providers()
     missing = [
-        f"{provider.upper()}_API_KEY" for provider in ("gemini", "groq") if provider not in configured
+        f"{provider.upper()}_API_KEY"
+        for provider in ("gemini", "groq")
+        if provider not in configured
     ]
 
     return {
