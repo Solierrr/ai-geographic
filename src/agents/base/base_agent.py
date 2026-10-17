@@ -1,13 +1,12 @@
 from langchain.agents import create_agent
 
 from src.agents.base.base_prompt import build_system_prompt
-from src.core.llm.llm_gemini import llm_gemini
-from src.core.llm.llm_groq import llm_groq
+from src.core.llm.llm_chain import llm_chain
 
 
 def get_default_llm():
-    """Retorna o Gemini como modelo principal, com Groq como fallback."""
-    return llm_gemini().with_fallbacks([llm_groq()])
+    """Retorna a cadeia de provedores de LLM_PROVIDER_ORDER, com fallback entre eles."""
+    return llm_chain()
 
 
 def build_agent(

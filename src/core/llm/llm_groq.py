@@ -1,11 +1,10 @@
-from langchain_groq import ChatGroq
+import os
 
-from src.core.config.settings import settings
+from ai_lib.llm import get_chat_model
+
+from src.core.llm.keys import key_client
 
 
-def llm_groq(model="openai/gpt-oss-120b", temperature=0.7):
-    return ChatGroq(
-        model=model,
-        temperature=temperature,
-        api_key=settings.GROQ_API_KEY,
-    )
+def llm_groq(model=None, temperature=0.7):
+    model = model or os.getenv("LLM_MODEL_GROQ") or "openai/gpt-oss-120b"
+    return get_chat_model("groq", model=model, temperature=temperature, client=key_client())
