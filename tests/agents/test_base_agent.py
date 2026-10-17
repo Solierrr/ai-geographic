@@ -3,18 +3,11 @@ from unittest.mock import Mock
 from src.agents.base import base_agent
 
 
-def test_get_default_llm_configura_groq_como_fallback(monkeypatch):
-    gemini = Mock()
-    groq = Mock()
-    llm_com_fallback = Mock()
-    gemini.with_fallbacks.return_value = llm_com_fallback
-    monkeypatch.setattr(base_agent, "llm_gemini", Mock(return_value=gemini))
-    monkeypatch.setattr(base_agent, "llm_groq", Mock(return_value=groq))
+def test_get_default_llm_usa_a_cadeia_de_provedores(monkeypatch):
+    cadeia = Mock()
+    monkeypatch.setattr(base_agent, "llm_chain", Mock(return_value=cadeia))
 
-    resultado = base_agent.get_default_llm()
-
-    assert resultado is llm_com_fallback
-    gemini.with_fallbacks.assert_called_once_with([groq])
+    assert base_agent.get_default_llm() is cadeia
 
 
 def test_build_agent_monta_prompt_e_cria_agente(monkeypatch):

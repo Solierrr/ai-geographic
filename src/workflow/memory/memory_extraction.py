@@ -1,5 +1,4 @@
-from src.core.llm.llm_gemini import llm_gemini
-from src.core.llm.llm_groq import llm_groq
+from src.core.llm.llm_chain import llm_chain
 
 MEMORY_EXTRACTION_PROMPT = """Você mantém um perfil de fatos duráveis sobre um \
 usuário de [NOME_DO_PROJETO], com base no histórico de conversas.
@@ -20,7 +19,7 @@ Máximo de 20 linhas."""
 async def extrair_fatos_atualizados(
     fatos_existentes: list[str], ultima_troca: str
 ) -> list[str]:
-    llm = llm_gemini().with_fallbacks([llm_groq()])
+    llm = llm_chain()
     resposta = await llm.ainvoke(
         MEMORY_EXTRACTION_PROMPT.format(
             fatos_existentes="\n".join(fatos_existentes) or "(nenhum ainda)",

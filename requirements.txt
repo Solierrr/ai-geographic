@@ -20,3 +20,5 @@ uvicorn
 certifi
 redis
 pyjwt
+solaria-lib @ git+https://github.com/Solierrr/lib-ai.git@710fecce17ec935c2ea60d00039c2775042a2976
+python-dotenv
