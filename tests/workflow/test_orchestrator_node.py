@@ -3,18 +3,28 @@ from unittest.mock import Mock
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from src.agents.base.system_prompt import SYSTEM_CORE_COMMUNICATION, SYSTEM_CORE_SECURITY
+from src.agents.base.system_prompt import (
+    SYSTEM_CORE_COMMUNICATION,
+    SYSTEM_CORE_SECURITY,
+)
 from src.agents.specialist.orchestrator.orchestrator_prompt import ORCHESTRATOR_AGENT
 import src.workflow.nodes.orchestrator_node as orchestrator_node
 
 
 def test_orchestrator_node_uses_prompt_and_fallback(monkeypatch):
     llm_com_fallback = Mock()
-    llm_com_fallback.invoke.return_value = SimpleNamespace(content="Resposta final consolidada")
-    monkeypatch.setattr(orchestrator_node, "llm_chain", Mock(return_value=llm_com_fallback))
+    llm_com_fallback.invoke.return_value = SimpleNamespace(
+        content="Resposta final consolidada"
+    )
+    monkeypatch.setattr(
+        orchestrator_node, "llm_chain", Mock(return_value=llm_com_fallback)
+    )
 
     resultado = orchestrator_node.orchestrator_node(
-        {"messages": [HumanMessage(content="Olá")], "turn_agents": ["example_specialist"]}
+        {
+            "messages": [HumanMessage(content="Olá")],
+            "turn_agents": ["example_specialist"],
+        }
     )
 
     assert resultado["turn_agents"] == ["example_specialist", "orchestrator"]
@@ -30,7 +40,9 @@ def test_orchestrator_node_uses_prompt_and_fallback(monkeypatch):
 def test_orchestrator_node_keeps_summary_in_context(monkeypatch):
     llm_com_fallback = Mock()
     llm_com_fallback.invoke.return_value = SimpleNamespace(content="Resposta")
-    monkeypatch.setattr(orchestrator_node, "llm_chain", Mock(return_value=llm_com_fallback))
+    monkeypatch.setattr(
+        orchestrator_node, "llm_chain", Mock(return_value=llm_com_fallback)
+    )
 
     orchestrator_node.orchestrator_node(
         {

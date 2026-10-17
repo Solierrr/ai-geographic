@@ -15,11 +15,7 @@ def orchestrator_node(state: GraphState, config=None) -> dict:
         SystemMessage(content=ORCHESTRATOR_PROMPT),
         *messages_with_summary(state),
     ]
-    response = (
-        llm_chain()
-        .invoke(messages_with_context, config=config)
-        .content.strip()
-    )
+    response = llm_chain().invoke(messages_with_context, config=config).content.strip()
 
     return {
         "messages": [AIMessage(content=response)],
