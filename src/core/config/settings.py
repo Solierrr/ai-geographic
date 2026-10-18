@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     MAPS_MCP_URL: str = "https://mapstools.googleapis.com/mcp"
     GOOGLE_MAPS_API_KEY: str | None = None
 
+    # google-registry: viabilidade solar do telhado (Solar API do Google).
+    REGISTRY_URL: str = "http://localhost:8004"
+    REGISTRY_CONSUMER_TOKEN: str | None = None
+
     # A2A: o ai-assistant recebe a delegação de recomendação de produtos.
     A2A_ASSISTANT_URL: str = "http://localhost:8000"
 

@@ -59,7 +59,14 @@ def test_especialista_de_maps_usa_so_as_tools_do_dominio(
     result = asyncio.run(node(STATE))
 
     get_tools.assert_awaited_once_with(*tools)
-    build_agent.assert_called_once_with(getattr(module, prompt), tools=tools_do_maps)
+    chamada = build_agent.call_args
+    assert chamada.args == (getattr(module, prompt),)
+    usadas = chamada.kwargs["tools"]
+    assert usadas[: len(tools_do_maps)] == tools_do_maps
+    extras = [t.name for t in usadas[len(tools_do_maps) :]]
+    assert extras == (
+        ["consultar_viabilidade_solar"] if agent_name == "field_conditions" else []
+    )
     assert result["messages"][0].content == "Vale ir: sem chuva prevista."
     assert result["turn_agents"] == [agent_name]
 
