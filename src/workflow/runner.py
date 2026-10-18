@@ -2,11 +2,11 @@ import asyncio
 import logging
 from uuid import uuid4
 
-from ai_lib.guardrails import anonymize_text
 from langchain_core.messages import HumanMessage
 
+from src.core.guardrails.anonymize import anonymize_text
 from src.core.security.jwt import decode_user_id
-from src.core.travel.models import Coordinate
+from src.core.security.request_context import current_user_token
 from src.infra.api_messenger.client import (
     criar_conversa_chatbot,
     enviar_mensagem_chatbot,
@@ -62,13 +62,9 @@ async def _get_or_create_conversation_id(thread_id: str, user_token: str) -> str
 
 
 async def execute_turn(
-    conversation_id: str,
-    user_input: str,
-    workflow,
-    user_token: str,
-    current_location: Coordinate | None = None,
-    user_timezone: str | None = None,
+    conversation_id: str, user_input: str, workflow, user_token: str
 ) -> dict:
+    current_user_token.set(user_token)
     turn_id = str(uuid4())
     anonymized_user_input, _ = anonymize_text(user_input)
     api_conversation_id = await _get_or_create_conversation_id(
@@ -89,20 +85,6 @@ async def execute_turn(
         {
             "messages": [HumanMessage(content=user_input)],
             "route": "",
-            "intent": "",
-            "flow_status": "",
-            "current_location": current_location.model_dump()
-            if current_location
-            else None,
-            "user_timezone": user_timezone,
-            "route_options": [],
-            "weather_evidence": [],
-            "solar_result": {},
-            "timezone_result": {},
-            "route_decision": {},
-            "route_data": None,
-            "output_status": "",
-            "provider_issue": None,
             "pii_map": {},
             "turn_agents": [],
             "judge_retries": 0,
@@ -130,12 +112,7 @@ async def execute_turn(
         api_conversation_id, anonymized_assistant_response, audit_metadata
     )
 
-    if user_id and final_state.get("intent") not in {
-        "route",
-        "locate",
-        "solar",
-        "timezone",
-    }:
+    if user_id:
         ultima_troca = f"Usuário: {user_input}\nAssistente: {final_message.content}"
         _agendar_atualizacao_memoria(user_id, fatos_existentes, ultima_troca)
 

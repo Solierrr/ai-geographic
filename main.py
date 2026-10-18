@@ -2,7 +2,6 @@ import asyncio
 from uuid import uuid4
 
 from src.core.config.settings import settings
-from src.infra.external.google_registry import close_google_registry_client
 from src.workflow.runner import execute_turn
 
 
@@ -11,7 +10,8 @@ async def run_chat():
 
     if not settings.TEST_USER_TOKEN:
         print(
-            "Defina TEST_USER_TOKEN no .env com um JWT válido do api-auth antes de rodar."
+            "Defina TEST_USER_TOKEN no .env com um JWT válido (mock-idp ou "
+            "api-auth) antes de rodar."
         )
         return
 
@@ -41,12 +41,5 @@ async def run_chat():
             print(f"Ocorreu um erro: {error}")
 
 
-async def main() -> None:
-    try:
-        await run_chat()
-    finally:
-        await close_google_registry_client()
-
-
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(run_chat())

@@ -1,19 +1,6 @@
 # ai-geographic
 
-API de um assistente para localizar endereços, consultar fusos, analisar
-potencial solar e sugerir deslocamentos com dados geográficos. Address, Geo e
-Solar são consumidos pelo `google-registry`; Routes e Weather continuam locais
-temporariamente. O fluxo pede origem,
-destino, modo ou horário quando necessário, consulta as APIs e só recomenda
-uma rota apoiada nos resultados recebidos. Pedidos de catálogo, como listar
-pizzarias, ficam fora do escopo.
-
-A primeira versão calcula rotas de carro ou a pé. Pode comparar alternativas
-de rota ou três horários dentro de uma janela de até oito horas. A resposta
-traz texto e `route_data` com a geometria opcional da rota; a exibição do mapa
-no app ou no Google Maps será decidida depois.
-Se a geometria for exibida em um mapa, a implementação visual deverá usar
-Google Maps e manter as atribuições exigidas pelo provedor.
+Copiloto de campo do profissional de energia solar (técnicos, instaladores e engenheiros em serviço), usado no app mobile da Solaria. Ele ajuda quem está na rua a planejar a rota até o cliente, a decidir se vale ir a uma região em uma data (clima, chuva, vento e luz do dia) e a ter uma noção aproximada do potencial solar do local. Usa o MCP oficial do Google Maps (lugares, clima e rotas) e, quando a dúvida é sobre produtos, delega ao `ai-assistant` por A2A, repassando o JWT do profissional.
 
 <p>
 
@@ -35,7 +22,6 @@ Google Maps e manter as atribuições exigidas pelo provedor.
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [RUNNING.md](./RUNNING.md)
-- [docs/plano-implementacao-rotas.md](./docs/plano-implementacao-rotas.md)
 
 ## Contribuindo
 
