@@ -1,8 +1,6 @@
 # ai-geographic
 
-[preencha: parágrafo único explicando o propósito deste assistente de IA —
-qual domínio ele atende, que tipo de usuário conversa com ele e como ele se
-encaixa nos demais serviços da organização. Mínimo de 60 palavras.]
+Copiloto de campo do profissional de energia solar (técnicos, instaladores e engenheiros em serviço), usado no app mobile da Solaria. Ele ajuda quem está na rua a planejar a rota até o cliente, a decidir se vale ir a uma região em uma data (clima, chuva, vento e luz do dia) e a ter uma noção aproximada do potencial solar do local. Usa o MCP oficial do Google Maps (lugares, clima e rotas) e, quando a dúvida é sobre produtos, delega ao `ai-assistant` por A2A, repassando o JWT do profissional.
 
 <p>
 

@@ -13,7 +13,9 @@ from src.workflow.nodes import output_guardrail_node
 def _mock_llm(response, corrected=False):
     llm = Mock()
     status = "CORRIGIDO" if corrected else "APROVADO"
-    llm.invoke.return_value = AIMessage(content=f"STATUS: {status}\nRESPOSTA: {response}")
+    llm.invoke.return_value = AIMessage(
+        content=f"STATUS: {status}\nRESPOSTA: {response}"
+    )
     return llm
 
 
@@ -21,13 +23,16 @@ def _state(message_id="msg-1"):
     return {
         "messages": [AIMessage(content="Resposta do agente", id=message_id)],
         "pii_map": {"[PII_NOME]": "Ana"},
-        "turn_agents": ["router", "example_specialist", "orchestrator"],
+        "turn_agents": ["router", "route_planner", "orchestrator"],
     }
 
 
 def test_output_guardrail_prompt_omits_communication_standards():
     assert SYSTEM_CORE_SECURITY.strip() in output_guardrail_node.OUTPUT_GUARDRAIL_PROMPT
-    assert SYSTEM_CORE_COMMUNICATION.strip() not in output_guardrail_node.OUTPUT_GUARDRAIL_PROMPT
+    assert (
+        SYSTEM_CORE_COMMUNICATION.strip()
+        not in output_guardrail_node.OUTPUT_GUARDRAIL_PROMPT
+    )
 
 
 def test_output_guardrail_deanonymizes_valid_response(monkeypatch):
@@ -38,7 +43,9 @@ def test_output_guardrail_deanonymizes_valid_response(monkeypatch):
     result = output_guardrail_node.output_guardrail_node(_state())
     assert isinstance(result["messages"][0], RemoveMessage)
     assert result["messages"][1].content == "Ola, Ana."
-    assert result["messages"][1].additional_kwargs["specialists_used"] == ["example_specialist"]
+    assert result["messages"][1].additional_kwargs["specialists_used"] == [
+        "route_planner"
+    ]
     deanonymize.assert_called_once_with("Ola, [PII_NOME].", {"[PII_NOME]": "Ana"})
     llm.with_structured_output.assert_not_called()
 

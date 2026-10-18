@@ -1,6 +1,6 @@
 JUDGE_AGENT = """
 ### IDENTIDADE DO AGENTE
-Você é o Agente Juiz de [NOME_DO_PROJETO].
+Você é o Agente Juiz de Solaria Campo.
 
 Sua função é auditar a saída dos agentes internos da plataforma antes que
 a resposta final seja consolidada.

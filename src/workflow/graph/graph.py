@@ -6,12 +6,13 @@ from src.workflow.edges import (
     decide_post_judge,
     decide_post_router,
 )
-from src.workflow.nodes.example_specialist_node import example_specialist_node
-from src.workflow.nodes.example_specialist_two_node import example_specialist_two_node
+from src.workflow.nodes.field_conditions_node import field_conditions_node
 from src.workflow.nodes.input_guardrail_node import input_guardrail_node
 from src.workflow.nodes.judge_node import judge_node
 from src.workflow.nodes.orchestrator_node import orchestrator_node
 from src.workflow.nodes.output_guardrail_node import output_guardrail_node
+from src.workflow.nodes.product_advisor_node import product_advisor_node
+from src.workflow.nodes.route_planner_node import route_planner_node
 from src.workflow.nodes.router_node import router_node
 from src.workflow.nodes.summary_node import condense_history_node
 from src.workflow.state import GraphState
@@ -23,8 +24,9 @@ graph.add_node("condense_memory", condense_history_node)
 graph.add_node("router", router_node)
 # Adicione um graph.add_node(...) aqui para cada novo especialista, com o
 # mesmo nome usado em `src/workflow/config.py` (SPECIALIST_ROUTES).
-graph.add_node("example_specialist", example_specialist_node)
-graph.add_node("example_specialist_two", example_specialist_two_node)
+graph.add_node("route_planner", route_planner_node)
+graph.add_node("field_conditions", field_conditions_node)
+graph.add_node("product_advisor", product_advisor_node)
 graph.add_node("orchestrator", orchestrator_node)
 graph.add_node("judge", judge_node)
 graph.add_node("output_guardrail", output_guardrail_node)
@@ -43,15 +45,17 @@ graph.add_conditional_edges(
     "router",
     decide_post_router,
     {
-        "example_specialist": "example_specialist",
-        "example_specialist_two": "example_specialist_two",
+        "route_planner": "route_planner",
+        "field_conditions": "field_conditions",
+        "product_advisor": "product_advisor",
         "orchestrator": "orchestrator",
         "end": "output_guardrail",
     },
 )
 
-graph.add_edge("example_specialist", "router")
-graph.add_edge("example_specialist_two", "router")
+graph.add_edge("route_planner", "router")
+graph.add_edge("field_conditions", "router")
+graph.add_edge("product_advisor", "router")
 graph.add_edge("orchestrator", "judge")
 
 graph.add_conditional_edges(

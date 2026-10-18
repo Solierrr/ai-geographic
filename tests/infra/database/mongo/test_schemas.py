@@ -66,10 +66,10 @@ def test_message_schema_accepts_agent_and_metadata():
         conversation_id="conv-1",
         role="assistant",
         content="posso ajudar",
-        agent="example_specialist",
+        agent="route_planner",
         timestamp=timestamp,
         metadata={"source": "workflow"},
     )
 
-    assert message.agent == "example_specialist"
+    assert message.agent == "route_planner"
     assert message.metadata == {"source": "workflow"}
