@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage
 
 from src.core.guardrails.anonymize import anonymize_text
 from src.core.security.jwt import decode_user_id
+from src.core.security.request_context import current_user_token
 from src.infra.api_messenger.client import (
     criar_conversa_chatbot,
     enviar_mensagem_chatbot,
@@ -63,6 +64,7 @@ async def _get_or_create_conversation_id(thread_id: str, user_token: str) -> str
 async def execute_turn(
     conversation_id: str, user_input: str, workflow, user_token: str
 ) -> dict:
+    current_user_token.set(user_token)
     turn_id = str(uuid4())
     anonymized_user_input, _ = anonymize_text(user_input)
     api_conversation_id = await _get_or_create_conversation_id(

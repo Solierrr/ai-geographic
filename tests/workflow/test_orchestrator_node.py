@@ -23,11 +23,11 @@ def test_orchestrator_node_uses_prompt_and_fallback(monkeypatch):
     resultado = orchestrator_node.orchestrator_node(
         {
             "messages": [HumanMessage(content="Olá")],
-            "turn_agents": ["example_specialist"],
+            "turn_agents": ["route_planner"],
         }
     )
 
-    assert resultado["turn_agents"] == ["example_specialist", "orchestrator"]
+    assert resultado["turn_agents"] == ["route_planner", "orchestrator"]
     assert resultado["messages"][0].content == "Resposta final consolidada"
     mensagens = llm_com_fallback.invoke.call_args.args[0]
     assert isinstance(mensagens[0], SystemMessage)

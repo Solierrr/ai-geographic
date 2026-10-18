@@ -25,8 +25,12 @@ class Settings(BaseSettings):
         None  # só pra uso local via main.py, nunca em produção
     )
 
-    MCP_URL: str = "http://localhost:8001/mcp"
-    MCP_API_KEY: str | None = None
+    # MCP oficial do Google Maps (Grounding Lite): lugares, clima e rotas.
+    MAPS_MCP_URL: str = "https://mapstools.googleapis.com/mcp"
+    GOOGLE_MAPS_API_KEY: str | None = None
+
+    # A2A: o ai-assistant recebe a delegação de recomendação de produtos.
+    A2A_ASSISTANT_URL: str = "http://localhost:8000"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

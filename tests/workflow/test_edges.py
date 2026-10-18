@@ -12,14 +12,14 @@ def test_decide_post_input_guardrail_returns_end_for_end_route():
 
 
 def test_decide_post_input_guardrail_returns_proceed_for_other_routes():
-    assert decide_post_input_guardrail({"route": "example_specialist"}) == "proceed"
+    assert decide_post_input_guardrail({"route": "route_planner"}) == "proceed"
 
 
 @pytest.mark.parametrize(
     "route",
     [
-        "example_specialist",
-        "example_specialist_two",
+        "route_planner",
+        "field_conditions",
         "end",
     ],
 )
@@ -35,8 +35,8 @@ def test_decide_post_router_falls_back_to_orchestrator_when_route_was_already_co
     assert (
         decide_post_router(
             {
-                "route": "example_specialist",
-                "turn_agents": ["example_specialist", "router"],
+                "route": "route_planner",
+                "turn_agents": ["route_planner", "router"],
             }
         )
         == "orchestrator"

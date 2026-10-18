@@ -1,7 +1,7 @@
 from src.core.llm.llm_chain import llm_chain
 
 MEMORY_EXTRACTION_PROMPT = """Você mantém um perfil de fatos duráveis sobre um \
-usuário de [NOME_DO_PROJETO], com base no histórico de conversas.
+usuário do Solaria Campo, com base no histórico de conversas.
 
 Fatos existentes:
 {fatos_existentes}
