@@ -1,6 +1,5 @@
 from unittest.mock import Mock
 
-import ai_lib.guardrails.nodes as guardrail_nodes
 import pytest
 from groq import GroqError
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
@@ -24,7 +23,7 @@ def _configure(monkeypatch, categoria="APROVADO"):
     llm = _mock_llm(categoria)
     monkeypatch.setattr(input_guardrail_node, "llm_groq", Mock(return_value=llm))
     monkeypatch.setattr(
-        guardrail_nodes,
+        input_guardrail_node,
         "anonymize_text",
         Mock(return_value=("mensagem anonima", {"[PII_EMAIL]": "ana@example.com"})),
     )
@@ -53,7 +52,7 @@ def test_input_guardrail_approves_and_anonymizes(monkeypatch):
 def test_input_guardrail_resets_agents_from_previous_turn(monkeypatch):
     _configure(monkeypatch)
     result = input_guardrail_node.input_guardrail_node(
-        {"messages": [HumanMessage(content="nova", id="msg-2")], "turn_agents": ["orchestrator"]}
+        {"messages": [HumanMessage(content="nova", id="msg-2")], "turn_agents": ["router"]}
     )
     assert result["turn_agents"] == ["input_guardrail_approved"]
 
@@ -80,7 +79,7 @@ def test_input_guardrail_fails_closed_for_malformed_response(monkeypatch, conten
     llm = Mock()
     llm.invoke.return_value = AIMessage(content=content)
     monkeypatch.setattr(input_guardrail_node, "llm_groq", Mock(return_value=llm))
-    monkeypatch.setattr(guardrail_nodes, "anonymize_text", Mock(return_value=("anonima", {})))
+    monkeypatch.setattr(input_guardrail_node, "anonymize_text", Mock(return_value=("anonima", {})))
 
     result = input_guardrail_node.input_guardrail_node(
         {"messages": [HumanMessage(content="mensagem", id="msg-4")]}
@@ -92,7 +91,7 @@ def test_input_guardrail_fails_closed_when_groq_raises(monkeypatch):
     llm = Mock()
     llm.invoke.side_effect = GroqError("groq indisponivel")
     monkeypatch.setattr(input_guardrail_node, "llm_groq", Mock(return_value=llm))
-    monkeypatch.setattr(guardrail_nodes, "anonymize_text", Mock(return_value=("anonima", {})))
+    monkeypatch.setattr(input_guardrail_node, "anonymize_text", Mock(return_value=("anonima", {})))
     result = input_guardrail_node.input_guardrail_node(
         {"messages": [HumanMessage(content="mensagem", id="msg-5")]}
     )

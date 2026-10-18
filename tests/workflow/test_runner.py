@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, Mock
 
 from langchain_core.messages import AIMessage
 
-from src.workflow import runner
+import src.workflow.runner as runner
 
 
 def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypatch):
@@ -14,17 +14,17 @@ def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypat
                 AIMessage(
                     content="Resposta final",
                     additional_kwargs={
-                        "specialists_used": [],
+                        "specialists_used": ["faq_reader"],
                         "workflow_steps": [
-                            "input_guardrail_approved",
+                            "router",
+                            "faq_reader",
                             "orchestrator",
-                            "judge_approved",
                             "output_guardrail",
                         ],
                     },
                 )
             ],
-            "turn_agents": ["input_guardrail_approved", "orchestrator", "judge_approved"],
+            "turn_agents": ["router", "faq_reader", "orchestrator"],
         }
     )
     enviar_mensagem_usuario = AsyncMock()
@@ -67,11 +67,11 @@ def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypat
     assert enviar_mensagem_chatbot.await_args.args[2] == {
         "turnId": "turn-123",
         "contentAnonymized": True,
-        "specialistsUsed": [],
+        "specialistsUsed": ["faq_reader"],
         "workflowSteps": [
-            "input_guardrail_approved",
+            "router",
+            "faq_reader",
             "orchestrator",
-            "judge_approved",
             "output_guardrail",
         ],
     }

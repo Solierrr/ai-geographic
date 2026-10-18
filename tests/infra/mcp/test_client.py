@@ -1,6 +1,6 @@
 from unittest.mock import AsyncMock, Mock
 
-from src.infra.mcp import client
+import src.infra.mcp.client as client
 
 
 def _fake_tool(nome: str) -> Mock:

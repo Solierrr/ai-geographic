@@ -5,7 +5,7 @@
 Cada chamada de LLM registrada pelo `StepTracker` (`llm_call`) carrega
 `costUsd`: o custo em dólar daquela chamada específica, calculado a partir
 de `tokensIn`/`tokensOut` e da tabela de preços em
-`ai_lib.llm.pricing` (pacote `solaria-lib`).
+`src/core/config/model_pricing.py`.
 
 - Preço é por modelo, em USD por 1.000 tokens (`in`/`out` separados).
 - Match do modelo é exato primeiro, depois por prefixo (alguns providers
