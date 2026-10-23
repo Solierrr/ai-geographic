@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from collections.abc import Sequence
 from uuid import uuid4
 
 from langchain_core.messages import HumanMessage
@@ -62,23 +63,36 @@ async def _get_or_create_conversation_id(thread_id: str, user_token: str) -> str
 
 
 async def execute_turn(
-    conversation_id: str, user_input: str, workflow, user_token: str
+    conversation_id: str,
+    user_input: str,
+    workflow,
+    user_token: str,
+    *,
+    persist: bool = True,
+    extra_callbacks: Sequence = (),
 ) -> dict:
+    """Roda um turno do grafo.
+
+    `persist=False` (modo debug) não cria conversa nem grava mensagens no
+    api-messenger, não registra os steps de observabilidade e não lê nem
+    atualiza a memória de longo prazo: o turno só passa pelo grafo."""
     current_user_token.set(user_token)
     turn_id = str(uuid4())
-    anonymized_user_input, _ = anonymize_text(user_input)
-    api_conversation_id = await _get_or_create_conversation_id(
-        conversation_id, user_token
-    )
+    tracker: StepTracker | None = None
+    if persist:
+        anonymized_user_input, _ = anonymize_text(user_input)
+        api_conversation_id = await _get_or_create_conversation_id(
+            conversation_id, user_token
+        )
 
-    await enviar_mensagem_usuario(
-        api_conversation_id, anonymized_user_input, user_token
-    )
+        await enviar_mensagem_usuario(
+            api_conversation_id, anonymized_user_input, user_token
+        )
 
-    tracker = StepTracker(conversation_id=api_conversation_id)
+        tracker = StepTracker(conversation_id=api_conversation_id)
 
     user_id = await asyncio.to_thread(decode_user_id, user_token)
-    fatos_existentes = await get_user_memory(user_id) if user_id else []
+    fatos_existentes = await get_user_memory(user_id) if persist and user_id else []
     user_memory = "\n".join(f"- {fato}" for fato in fatos_existentes)
 
     final_state = await workflow.ainvoke(
@@ -93,9 +107,12 @@ async def execute_turn(
         },
         config={
             "configurable": {"thread_id": conversation_id},
-            "callbacks": [tracker],
+            "callbacks": [*([tracker] if tracker else []), *extra_callbacks],
         },
     )
+
+    if not persist:
+        return final_state
 
     final_message = final_state["messages"][-1]
     anonymized_assistant_response, _ = anonymize_text(final_message.content)
