@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import chat
+from src.api.routes import chat, debug
 from src.core.llm.keys import key_client
 from src.infra.database.mongo.indexes.user_memory_indexes import (
     ensure_user_memory_indexes,
@@ -33,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(chat.router)
+app.include_router(debug.router)
 
 
 @app.get("/health")
