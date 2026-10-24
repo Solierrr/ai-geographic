@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_PASSWORD: str | None = None
 
     API_MESSENGER_URL: str | None = None
+    SERVICE_KEY: str | None = None
 
     JWT_JWKS_URL: str | None = None
     JWT_ISSUER: str | None = None
