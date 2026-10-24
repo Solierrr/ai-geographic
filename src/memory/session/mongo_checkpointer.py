@@ -17,8 +17,8 @@ def create_mongo_checkpointer(tentativas: int = 3, espera_segundos: float = 2.0)
             return MongoDBSaver(
                 client=client,
                 db_name=settings.DB_MONGO_AGENTS,
-                checkpoint_collection_name="checkpoints_conversas",
-                writes_collection_name="checkpoints_conversas_writes",
+                checkpoint_collection_name="conversation_checkpoints",
+                writes_collection_name="conversation_checkpoint_writes",
                 ttl=ttl_segundos,
             )
         except ServerSelectionTimeoutError as erro:
