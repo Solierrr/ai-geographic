@@ -7,6 +7,7 @@ class Settings(BaseSettings):
         "mongodb://localhost:27017",
         validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI"),
     )
+    DB_MONGO_AGENTS: str = "dbagents"
     CHECKPOINT_TTL_DIAS: int = 30
 
     UPSTASH_REDIS_HOST: str | None = None

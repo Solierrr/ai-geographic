@@ -1,11 +1,12 @@
 from datetime import datetime, timezone
 
+from src.core.config.settings import settings
 from src.infra.database.mongo.async_client import get_async_mongodb_client
 from src.infra.database.mongo.collections.collections import Collections
 
 
 def _collection():
-    return get_async_mongodb_client()["assessor_inteligente"][Collections.AGENT_MEMORIES]
+    return get_async_mongodb_client()[settings.DB_MONGO_AGENTS][Collections.AGENT_MEMORIES]
 
 
 async def get_user_memory(user_id: str) -> list[str]:
