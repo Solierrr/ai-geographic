@@ -5,6 +5,10 @@ import httpx
 from src.core.config.settings import settings
 
 
+def _service_headers() -> dict:
+    return {"X-Service-Key": settings.SERVICE_KEY} if settings.SERVICE_KEY else {}
+
+
 async def criar_conversa_chatbot(user_type: str, user_details: dict, user_token: str) -> str:
     """Cria a conversa com o JWT do usuário real."""
     async with httpx.AsyncClient() as client:
@@ -34,6 +38,7 @@ async def enviar_mensagem_chatbot(
                 "metadata": metadata,
                 "environment": settings.ENVIRONMENT,
             },
+            headers=_service_headers(),
         )
         resp.raise_for_status()
 
@@ -43,6 +48,7 @@ async def enviar_observabilidade(payload: dict) -> None:
         resp = await client.post(
             f"{settings.API_MESSENGER_URL}/internal/observability",
             json={**payload, "environment": settings.ENVIRONMENT},
+            headers=_service_headers(),
         )
         resp.raise_for_status()
 
