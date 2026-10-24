@@ -47,10 +47,9 @@ async def test_criar_conversa_manda_environment_no_corpo(monkeypatch):
 @pytest.mark.asyncio
 @respx.mock
 async def test_enviar_mensagem_chatbot_nao_manda_header_de_autenticacao(monkeypatch):
-    """/internal/** não exige mais auth de aplicação — confirma que a
-    requisição não carrega Authorization nenhum."""
     monkeypatch.setattr(client.settings, "API_MESSENGER_URL", "http://api-messenger")
     monkeypatch.setattr(client.settings, "ENVIRONMENT", "LOCAL")
+    monkeypatch.setattr(client.settings, "SERVICE_KEY", None)
 
     mensagem_route = respx.post("http://api-messenger/internal/messages").mock(
         return_value=Response(200, json={})
@@ -123,3 +122,30 @@ async def test_enviar_mensagem_usuario_usa_endpoint_e_jwt_do_usuario(monkeypatch
         "content": "ola",
         "environment": "QA",
     }
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_rotas_internas_mandam_a_chave_de_servico(monkeypatch):
+    monkeypatch.setattr(client.settings, "API_MESSENGER_URL", "http://api-messenger")
+    monkeypatch.setattr(client.settings, "SERVICE_KEY", "chave-de-servico")
+
+    mensagem_route = respx.post("http://api-messenger/internal/messages").mock(
+        return_value=Response(200, json={})
+    )
+    observabilidade_route = respx.post("http://api-messenger/internal/observability").mock(
+        return_value=Response(201, json={})
+    )
+
+    await client.enviar_mensagem_chatbot("conv-1", "ola")
+    await client.enviar_observabilidade({"node": "router"})
+
+    assert mensagem_route.calls.last.request.headers["X-Service-Key"] == "chave-de-servico"
+    assert observabilidade_route.calls.last.request.headers["X-Service-Key"] == "chave-de-servico"
+
+
+def test_service_key_usa_a_chave_do_proprio_servico_como_reserva(monkeypatch):
+    monkeypatch.delenv("SERVICE_KEY", raising=False)
+    monkeypatch.setenv("SERVICE_KEY_AI_GEOGRAPHIC", "chave-do-servico")
+
+    assert client.settings.__class__(_env_file=None).SERVICE_KEY == "chave-do-servico"
