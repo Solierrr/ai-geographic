@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_PASSWORD: str | None = None
 
     API_MESSENGER_URL: str | None = None
-    SERVICE_KEY: str | None = None
+    SERVICE_KEY: str | None = Field(
+        None, validation_alias=AliasChoices("SERVICE_KEY", "SERVICE_KEY_AI_GEOGRAPHIC")
+    )
 
     JWT_JWKS_URL: str | None = None
     JWT_ISSUER: str | None = None
