@@ -3,7 +3,7 @@
 # Requer: make e sh (Git Bash no Windows). Para `make vault`: Infisical CLI e `infisical login`.
 
 # ---- especifico deste repositorio ----
-VAULT_FOLDERS ?= /database /redis /llm /service-urls /mcp
+VAULT_FOLDERS ?= /database /redis /llm /service-urls /mcp /service-keys
 ifeq ($(OS),Windows_NT)
 PY ?= .venv/Scripts/python
 else
