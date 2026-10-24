@@ -142,3 +142,10 @@ async def test_rotas_internas_mandam_a_chave_de_servico(monkeypatch):
 
     assert mensagem_route.calls.last.request.headers["X-Service-Key"] == "chave-de-servico"
     assert observabilidade_route.calls.last.request.headers["X-Service-Key"] == "chave-de-servico"
+
+
+def test_service_key_usa_a_chave_do_proprio_servico_como_reserva(monkeypatch):
+    monkeypatch.delenv("SERVICE_KEY", raising=False)
+    monkeypatch.setenv("SERVICE_KEY_AI_GEOGRAPHIC", "chave-do-servico")
+
+    assert client.settings.__class__(_env_file=None).SERVICE_KEY == "chave-do-servico"
