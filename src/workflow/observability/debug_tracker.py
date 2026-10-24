@@ -90,8 +90,6 @@ class _Clipper:
     def clean(self, value: Any) -> Any:
         if isinstance(value, str):
             too_long = len(value) > self.limit
-            # Corta antes de anonimizar: os padrões de PII têm custo quadrático em
-            # textos longos sem separadores. A folga evita deixar pedaço de PII na borda.
             value = mask_pii(value[: self.limit + _CLIP_MARGIN])
             if too_long or len(value) > self.limit:
                 self.clipped = True

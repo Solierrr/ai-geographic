@@ -76,7 +76,6 @@ async def conversar_com_debug(
     from src.workflow.graph.graph import compiled_app
 
     collector = DebugTracker()
-    # A conversa de debug tem thread própria (por admin), separada das reais.
     thread_id = f"debug:{sub}:{requisicao.conversation_id}"
     try:
         final_state = await execute_turn(
