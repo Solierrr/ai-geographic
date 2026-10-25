@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.errors import register_error_handlers
 from src.api.routes import chat
 from src.core.llm.keys import key_client
 from src.infra.database.mongo.indexes.user_memory_indexes import (
@@ -31,6 +32,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+register_error_handlers(app)
 
 app.include_router(chat.router)
 
