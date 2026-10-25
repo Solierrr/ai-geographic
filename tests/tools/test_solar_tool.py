@@ -5,6 +5,7 @@ import pytest
 
 from src.core.config.settings import settings
 from src.tools import solar
+from src.workflow.outcome import Outcome, Reason, start_turn
 
 VIABILIDADE = {
     "imagery_date": "2023-05-01",
@@ -84,6 +85,15 @@ def test_sem_token_nao_envia_autorizacao(registry, monkeypatch):
     _consultar()
 
     assert "Authorization" not in pedidos[0].headers
+
+
+def test_falha_do_registry_marca_o_turno(registry):
+    registry(lambda r: httpx.Response(500))
+    issues = start_turn()
+
+    _consultar()
+
+    assert issues == [(Outcome.TOOL_FAILED, Reason.SOLAR_DATA_UNAVAILABLE)]
 
 
 def test_sem_cobertura_devolve_mensagem_clara(registry):

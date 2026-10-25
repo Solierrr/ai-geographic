@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Header, HTTPException
 
 from src.api.schemas.chat import ChatRequest, ChatResponse
+from src.workflow.outcome import Outcome
 from src.workflow.runner import execute_turn
 
 router = APIRouter(tags=["chat"])
@@ -30,6 +31,8 @@ async def conversar(
 
     return ChatResponse(
         response=final_message.content,
+        outcome=final_state.get("outcome", Outcome.ANSWERED),
+        reason=final_state.get("reason"),
         specialists_used=metadata.get("specialists_used", []),
         workflow_steps=metadata.get(
             "workflow_steps", final_state.get("turn_agents", [])

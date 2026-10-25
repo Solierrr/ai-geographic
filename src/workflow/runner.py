@@ -18,6 +18,7 @@ from src.infra.database.mongo.repositories.user_memory_repository import (
 )
 from src.workflow.memory.memory_extraction import extrair_fatos_atualizados
 from src.workflow.observability.step_tracker import StepTracker
+from src.workflow.outcome import resolve_outcome, start_turn
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ async def execute_turn(
     conversation_id: str, user_input: str, workflow, user_token: str
 ) -> dict:
     current_user_token.set(user_token)
+    issues = start_turn()
     turn_id = str(uuid4())
     anonymized_user_input, _ = anonymize_text(user_input)
     api_conversation_id = await _get_or_create_conversation_id(
@@ -75,7 +77,7 @@ async def execute_turn(
         api_conversation_id, anonymized_user_input, user_token
     )
 
-    tracker = StepTracker(conversation_id=api_conversation_id)
+    tracker = StepTracker(conversation_id=api_conversation_id, issues=issues)
 
     user_id = await asyncio.to_thread(decode_user_id, user_token)
     fatos_existentes = await get_user_memory(user_id) if user_id else []
@@ -100,6 +102,10 @@ async def execute_turn(
     final_message = final_state["messages"][-1]
     anonymized_assistant_response, _ = anonymize_text(final_message.content)
     message_metadata = final_message.additional_kwargs
+    outcome, reason = resolve_outcome(
+        message_metadata.get("workflow_steps", final_state.get("turn_agents", [])),
+        issues,
+    )
     audit_metadata = {
         "turnId": turn_id,
         "contentAnonymized": True,
@@ -116,4 +122,4 @@ async def execute_turn(
         ultima_troca = f"Usuário: {user_input}\nAssistente: {final_message.content}"
         _agendar_atualizacao_memoria(user_id, fatos_existentes, ultima_troca)
 
-    return final_state
+    return {**final_state, "outcome": outcome, "reason": reason}
