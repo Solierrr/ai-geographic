@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "LOCAL"
 
+    DOCS_ENABLED: bool = True
+
     TEST_USER_TOKEN: str | None = (
         None  # só pra uso local via main.py, nunca em produção
     )
