@@ -49,6 +49,10 @@ pip install -r requirements.txt
 uvicorn src.api.app:app --reload
 ```
 
+## Autenticação local
+
+O JWT de usuário vem do `api-auth` de verdade, sem emissor falso: suba a stack local com `make dev-up` no `database-console` e aponte `JWT_JWKS_URL` para o JWKS dele (`http://localhost:8081/.well-known/jwks.json`). Para conversar pelo terminal, rode `python main.py` e informe o access token obtido no login do `api-auth` local.
+
 ## Telemetria (OpenTelemetry)
 
 O serviço envia traces, métricas e logs por OTLP pelo wrapper `opentelemetry-instrument` (auto-instrumentação de FastAPI e `logging`), sem código na aplicação. Ele só é usado quando `OTEL_SDK_DISABLED=false`; sem isso o serviço sobe como antes. Para ver a telemetria localmente, suba o Grafana local com `make obs-up` no repositório `infra-otel-collector` (ver `docs-warehouse/helps/TRY-LOCAL.md`).

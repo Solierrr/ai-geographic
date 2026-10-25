@@ -26,10 +26,6 @@ class Settings(BaseSettings):
 
     DOCS_ENABLED: bool = True
 
-    TEST_USER_TOKEN: str | None = (
-        None  # só pra uso local via main.py, nunca em produção
-    )
-
     # MCP oficial do Google Maps (Grounding Lite): lugares, clima e rotas.
     MAPS_MCP_URL: str = "https://mapstools.googleapis.com/mcp"
     GOOGLE_MAPS_API_KEY: str | None = None
