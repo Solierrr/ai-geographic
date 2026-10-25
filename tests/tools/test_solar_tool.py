@@ -87,6 +87,26 @@ def test_sem_token_nao_envia_autorizacao(registry, monkeypatch):
     assert "Authorization" not in pedidos[0].headers
 
 
+def test_chave_de_servico_vai_no_cabecalho_quando_configurada(registry, monkeypatch):
+    monkeypatch.setattr(settings, "SERVICE_KEY", "chave-de-servico-de-teste")
+    monkeypatch.setattr(settings, "REGISTRY_CONSUMER_TOKEN", None)
+    pedidos = registry(lambda r: httpx.Response(200, json=VIABILIDADE))
+
+    _consultar()
+
+    assert pedidos[0].headers["X-Service-Key"] == "chave-de-servico-de-teste"
+    assert "Authorization" not in pedidos[0].headers
+
+
+def test_sem_chave_de_servico_nao_envia_o_cabecalho(registry, monkeypatch):
+    monkeypatch.setattr(settings, "SERVICE_KEY", None)
+    pedidos = registry(lambda r: httpx.Response(200, json=VIABILIDADE))
+
+    _consultar()
+
+    assert "X-Service-Key" not in pedidos[0].headers
+
+
 def test_falha_do_registry_marca_o_turno(registry):
     registry(lambda r: httpx.Response(500))
     issues = start_turn()

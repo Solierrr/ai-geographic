@@ -9,9 +9,10 @@ _SEGMENTOS_MOSTRADOS = 3
 
 
 def _headers() -> dict[str, str]:
+    headers = {"X-Service-Key": settings.SERVICE_KEY} if settings.SERVICE_KEY else {}
     if settings.REGISTRY_CONSUMER_TOKEN:
-        return {"Authorization": f"Bearer {settings.REGISTRY_CONSUMER_TOKEN}"}
-    return {}
+        headers["Authorization"] = f"Bearer {settings.REGISTRY_CONSUMER_TOKEN}"
+    return headers
 
 
 def _resumir(dados: dict) -> dict:
