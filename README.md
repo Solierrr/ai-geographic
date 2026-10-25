@@ -14,7 +14,7 @@ Copiloto de campo do profissional de energia solar (técnicos, instaladores e en
 
 <p>
   <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=python,fastapi,langchain,mongodb,redis,docker" height="48" alt="Stack">
+    <img src="https://skills.syvixor.com/api/icons?i=python,fastapi,langchain,mongodb,docker" height="48" alt="Stack">
   </a>
 </p>
 

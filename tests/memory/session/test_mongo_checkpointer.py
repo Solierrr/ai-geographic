@@ -19,9 +19,9 @@ def test_create_mongo_checkpointer_usa_nome_de_colecao_correto(monkeypatch):
     assert checkpointer == "checkpointer-fake"
     kwargs = chamadas[0]
     assert kwargs["client"] == "cliente-fake"
-    assert kwargs["db_name"] == "assessor_inteligente"
-    assert kwargs["checkpoint_collection_name"] == "checkpoints_conversas"
-    assert kwargs["writes_collection_name"] == "checkpoints_conversas_writes"
+    assert kwargs["db_name"] == "dbagents"
+    assert kwargs["checkpoint_collection_name"] == "conversation_checkpoints"
+    assert kwargs["writes_collection_name"] == "conversation_checkpoint_writes"
     # ttl da lib é em segundos, não em dias/minutos
     assert kwargs["ttl"] == 30 * 24 * 60 * 60
 
