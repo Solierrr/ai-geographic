@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.errors import register_error_handlers
-from src.api.routes import chat
-from src.core.llm.keys import key_client
+from src.api.routes import chat, health
 from src.infra.database.mongo.indexes.user_memory_indexes import (
     ensure_user_memory_indexes,
 )
@@ -37,18 +36,4 @@ register_error_handlers(app)
 
 app.include_router(chat.router)
 
-
-@app.get("/health")
-def health() -> dict:
-    """Responde 'ok' se o servidor subiu, listando configuração ausente."""
-    configured = key_client().providers()
-    missing = [
-        f"{provider.upper()}_API_KEY"
-        for provider in ("gemini", "groq")
-        if provider not in configured
-    ]
-
-    return {
-        "status": "ok" if not missing else "atencao",
-        "missing_settings": missing,
-    }
+app.include_router(health.router)
