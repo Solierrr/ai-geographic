@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "LOCAL"
 
+    DEBUG_ADMIN_SUBS: str = ""
+
     TEST_USER_TOKEN: str | None = (
         None  # só pra uso local via main.py, nunca em produção
     )
