@@ -6,17 +6,19 @@ api-messenger nem na memória de longo prazo."""
 import asyncio
 import logging
 import re
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.api.schemas.chat import ChatRequest, ChatResponse
 from src.core.config.settings import settings
 from src.core.security.jwt import decode_user_id
+from src.workflow.debug_replay import ReplayError, count_turns
 from src.workflow.observability.debug_tracker import DebugTracker, mask_pii
-from src.workflow.runner import execute_turn
+from src.workflow.runner import execute_single_node, execute_turn
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,37 @@ DEBUG_ALLOWED_ENVIRONMENTS = frozenset({"LOCAL", "DEV", "QA", "PROD"})
 _UUID = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
 )
+
+
+class PromptMessage(BaseModel):
+    type: str = Field(max_length=32)
+    content: str
+
+
+class PromptOverrideItem(BaseModel):
+    call: int = Field(ge=0, le=50)
+    prompt: list[PromptMessage]
+
+
+class CustomRun(BaseModel):
+    turn: int = Field(
+        0, ge=0, le=1000, description="Posição do turno na conversa de debug."
+    )
+    node: str = Field(pattern=r"^[a-z0-9_]{1,64}$")
+    occurrence: int = Field(0, ge=0, le=50, description="Qual execução do nó no turno.")
+    stop_after_node: Literal[True] = True
+    prompts: list[PromptOverrideItem] = Field(default_factory=list, max_length=50)
+
+    @field_validator("prompts")
+    @classmethod
+    def _calls_unicas(cls, items):
+        if len({item.call for item in items}) != len(items):
+            raise ValueError("Chamada de LLM repetida em prompts")
+        return items
+
+
+class DebugChatRequest(ChatRequest):
+    custom: CustomRun | None = None
 
 
 class DebugChatResponse(ChatResponse):
@@ -43,6 +76,16 @@ def debug_enabled() -> bool:
     return settings.ENVIRONMENT.strip().upper() in DEBUG_ALLOWED_ENVIRONMENTS and bool(
         debug_admin_subs()
     )
+
+
+async def _last_turn(workflow, thread_id: str) -> int | None:
+    try:
+        return await count_turns(workflow, thread_id) - 1
+    except Exception:
+        logger.warning(
+            "Não foi possível contar os turnos de %s", thread_id, exc_info=True
+        )
+        return None
 
 
 async def _authorize(
@@ -68,7 +111,7 @@ async def _authorize(
 
 @router.post("/chat", response_model=DebugChatResponse)
 async def conversar_com_debug(
-    requisicao: ChatRequest,
+    requisicao: DebugChatRequest,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ):
     token, sub = await _authorize(credentials)
@@ -77,6 +120,10 @@ async def conversar_com_debug(
 
     collector = DebugTracker()
     thread_id = f"debug:{sub}:{requisicao.conversation_id}"
+    if requisicao.custom is not None:
+        return await _executar_no(
+            requisicao, compiled_app, token, thread_id, collector, sub
+        )
     try:
         final_state = await execute_turn(
             thread_id,
@@ -92,7 +139,10 @@ async def conversar_com_debug(
             status_code=500,
             content={
                 "detail": mask_pii(f"{type(error).__name__}: {error}"[:1000])[:500],
-                "debug": collector.snapshot(),
+                "debug": {
+                    **collector.snapshot(),
+                    "turn": await _last_turn(compiled_app, thread_id),
+                },
             },
         )
 
@@ -101,6 +151,7 @@ async def conversar_com_debug(
     debug = collector.snapshot()
     debug["environment"] = settings.ENVIRONMENT
     debug["persisted"] = False
+    debug["turn"] = await _last_turn(compiled_app, thread_id)
     return DebugChatResponse(
         response=final_message.content,
         specialists_used=metadata.get("specialists_used", []),
@@ -109,3 +160,55 @@ async def conversar_com_debug(
         ),
         debug=debug,
     )
+
+
+async def _executar_no(requisicao, workflow, token, thread_id, collector, sub):
+    custom = requisicao.custom
+    logger.info(
+        "Execução personalizada de nó (sub=%s, nó=%s, turno=%s, prompts=%s)",
+        sub,
+        custom.node,
+        custom.turn,
+        len(custom.prompts),
+    )
+    overrides: dict[int, dict[int, str]] = {}
+    for item in custom.prompts:
+        overrides[item.call] = {
+            position: message.content
+            for position, message in enumerate(item.prompt)
+            if message.type == "system"
+        }
+    try:
+        _, proximos, aplicados = await execute_single_node(
+            thread_id,
+            workflow,
+            token,
+            turn=custom.turn,
+            node=custom.node,
+            occurrence=custom.occurrence,
+            overrides=overrides,
+            extra_callbacks=[collector],
+        )
+    except ReplayError as error:
+        return JSONResponse(status_code=error.status, content={"detail": error.detail})
+    except Exception as error:
+        logger.exception("Falha na execução personalizada do nó %s", custom.node)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": mask_pii(f"{type(error).__name__}: {error}"[:1000])[:500],
+                "debug": collector.snapshot(),
+            },
+        )
+    debug = collector.snapshot()
+    debug["environment"] = settings.ENVIRONMENT
+    debug["persisted"] = False
+    debug["custom"] = {
+        "node": custom.node,
+        "turn": custom.turn,
+        "occurrence": custom.occurrence,
+        "stopped": True,
+        "overrides_applied": aplicados,
+        "next": list(proximos),
+    }
+    return DebugChatResponse(response="", debug=debug)

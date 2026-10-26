@@ -17,6 +17,7 @@ from src.infra.database.mongo.repositories.user_memory_repository import (
     get_user_memory,
     upsert_user_memory,
 )
+from src.workflow.debug_replay import run_single_node
 from src.workflow.memory.memory_extraction import extrair_fatos_atualizados
 from src.workflow.observability.step_tracker import StepTracker
 
@@ -134,3 +135,32 @@ async def execute_turn(
         _agendar_atualizacao_memoria(user_id, fatos_existentes, ultima_troca)
 
     return final_state
+
+
+async def execute_single_node(
+    thread_id: str,
+    workflow,
+    user_token: str,
+    *,
+    turn: int,
+    node: str,
+    occurrence: int,
+    overrides: dict[int, dict[int, str]],
+    extra_callbacks: Sequence = (),
+):
+    current_user_token.set(user_token)
+    return await run_single_node(
+        workflow,
+        thread_id,
+        turn=turn,
+        node=node,
+        occurrence=occurrence,
+        overrides=overrides,
+        callbacks=[*extra_callbacks],
+        metadata={
+            "conversation_id": thread_id,
+            "assistant": "ai-geographic",
+            "source": "debug-replay",
+        },
+        tags=[],
+    )

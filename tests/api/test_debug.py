@@ -236,3 +236,162 @@ def test_padrao_do_settings_nao_tem_admin_nem_flag_de_liga_desliga(monkeypatch):
 
     assert padrao.DEBUG_ADMIN_SUBS == ""
     assert not hasattr(padrao, "DEBUG_ENDPOINT_ENABLED")
+
+
+_CUSTOM = {
+    "turn": 0,
+    "node": "router",
+    "occurrence": 0,
+    "stop_after_node": True,
+    "prompts": [
+        {
+            "call": 0,
+            "prompt": [
+                {"type": "system", "content": "NOVO PROMPT"},
+                {"type": "human", "content": "oi"},
+            ],
+        }
+    ],
+}
+
+
+def test_execucao_personalizada_roda_so_o_no_e_confirma_no_debug(
+    debug_ligado, monkeypatch
+):
+    chamada = {}
+
+    async def fake_execute_single_node(thread_id, workflow, token, **kwargs):
+        collector = kwargs["extra_callbacks"][0]
+        await collector.on_chain_start(
+            {}, {}, run_id="n1", metadata={"langgraph_node": "router"}, name="router"
+        )
+        await collector.on_chain_end({"route": "faq_reader"}, run_id="n1")
+        chamada.update(thread_id=thread_id, token=token, kwargs=kwargs)
+        return {}, ("faq_reader",), 1
+
+    monkeypatch.setattr(
+        "src.api.routes.debug.execute_single_node", fake_execute_single_node
+    )
+
+    with _client() as client:
+        response = client.post(
+            "/debug/chat", json={**_BODY, "custom": _CUSTOM}, headers=_AUTH
+        )
+
+    assert response.status_code == 200
+    debug = response.json()["debug"]
+    assert [n["node"] for n in debug["nodes"]] == ["router"]
+    assert debug["custom"] == {
+        "node": "router",
+        "turn": 0,
+        "occurrence": 0,
+        "stopped": True,
+        "overrides_applied": 1,
+        "next": ["faq_reader"],
+    }
+    assert debug["persisted"] is False
+    assert chamada["thread_id"] == f"debug:{ADMIN_SUB}:conv-1"
+    assert chamada["kwargs"]["overrides"] == {0: {0: "NOVO PROMPT"}}
+    assert chamada["kwargs"]["node"] == "router"
+
+
+def test_execucao_personalizada_exige_admin(debug_ligado, monkeypatch):
+    monkeypatch.setattr("src.api.routes.debug.decode_user_id", lambda token: OUTRO_SUB)
+
+    with _client() as client:
+        response = client.post(
+            "/debug/chat", json={**_BODY, "custom": _CUSTOM}, headers=_AUTH
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "custom",
+    [
+        {**_CUSTOM, "node": "Router; DROP"},
+        {**_CUSTOM, "stop_after_node": False},
+        {**_CUSTOM, "turn": -1},
+        {**_CUSTOM, "prompts": [_CUSTOM["prompts"][0], _CUSTOM["prompts"][0]]},
+    ],
+)
+def test_execucao_personalizada_invalida_responde_422(debug_ligado, custom):
+    with _client() as client:
+        response = client.post(
+            "/debug/chat", json={**_BODY, "custom": custom}, headers=_AUTH
+        )
+
+    assert response.status_code == 422
+
+
+def test_erro_do_replay_vira_a_resposta_http(debug_ligado, monkeypatch):
+    from src.workflow.debug_replay import ReplayError
+
+    async def fake_execute_single_node(*args, **kwargs):
+        raise ReplayError(404, "Esse turno não existe nesta conversa de debug.")
+
+    monkeypatch.setattr(
+        "src.api.routes.debug.execute_single_node", fake_execute_single_node
+    )
+
+    with _client() as client:
+        response = client.post(
+            "/debug/chat", json={**_BODY, "custom": _CUSTOM}, headers=_AUTH
+        )
+
+    assert response.status_code == 404
+    assert "turno" in response.json()["detail"]
+
+
+def test_resposta_traz_o_indice_do_turno_executado(debug_ligado, monkeypatch):
+    async def fake_execute_turn(thread_id, message, workflow, **kwargs):
+        return {**_estado_final(), "messenger_conversation_id": None}
+
+    async def fake_count_turns(workflow, thread_id):
+        return 3
+
+    monkeypatch.setattr("src.api.routes.debug.execute_turn", fake_execute_turn)
+    monkeypatch.setattr("src.api.routes.debug.count_turns", fake_count_turns)
+
+    with _client() as client:
+        response = client.post("/debug/chat", json=_BODY, headers=_AUTH)
+
+    assert response.json()["debug"]["turn"] == 2
+
+
+def test_falha_no_turno_tambem_traz_o_indice_do_turno(debug_ligado, monkeypatch):
+    async def fake_execute_turn(*args, **kwargs):
+        raise RuntimeError("falhou")
+
+    async def fake_count_turns(workflow, thread_id):
+        return 1
+
+    monkeypatch.setattr("src.api.routes.debug.execute_turn", fake_execute_turn)
+    monkeypatch.setattr("src.api.routes.debug.count_turns", fake_count_turns)
+
+    with _client() as client:
+        response = client.post("/debug/chat", json=_BODY, headers=_AUTH)
+
+    assert response.status_code == 500
+    assert response.json()["debug"]["turn"] == 0
+
+
+def test_execucao_personalizada_deixa_log_de_auditoria_sem_conteudo(
+    debug_ligado, monkeypatch, caplog
+):
+    async def fake_execute_single_node(*args, **kwargs):
+        return {}, ("router",), 1
+
+    monkeypatch.setattr(
+        "src.api.routes.debug.execute_single_node", fake_execute_single_node
+    )
+
+    with caplog.at_level("INFO", logger="src.api.routes.debug"), _client() as client:
+        client.post("/debug/chat", json={**_BODY, "custom": _CUSTOM}, headers=_AUTH)
+
+    linha = next(
+        r.getMessage() for r in caplog.records if "personalizada" in r.getMessage()
+    )
+    assert ADMIN_SUB in linha
+    assert "router" in linha
+    assert "NOVO PROMPT" not in linha
