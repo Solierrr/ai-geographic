@@ -101,12 +101,11 @@ async def _authorize(
     sub = await asyncio.to_thread(decode_user_id, credentials.credentials)
     if not sub:
         raise HTTPException(status_code=401, detail="Token inválido")
-    if sub.lower() not in debug_admin_subs():
+    admin = next((item for item in debug_admin_subs() if item == sub.lower()), None)
+    if admin is None:
         raise HTTPException(status_code=403, detail="Sem permissão para o modo debug")
-    logger.info(
-        "Turno de debug (sub=%s, ambiente=%s)", sub.lower(), settings.ENVIRONMENT
-    )
-    return credentials.credentials, sub.lower()
+    logger.info("Turno de debug (sub=%s, ambiente=%s)", admin, settings.ENVIRONMENT)
+    return credentials.credentials, admin
 
 
 @router.post("/chat", response_model=DebugChatResponse)
@@ -162,12 +161,20 @@ async def conversar_com_debug(
     )
 
 
+def _no_para_log(workflow, node: str) -> str:
+    return next(
+        (nome for nome in getattr(workflow, "nodes", ()) if nome == node),
+        "desconhecido",
+    )
+
+
 async def _executar_no(requisicao, workflow, token, thread_id, collector, sub):
     custom = requisicao.custom
+    no_log = _no_para_log(workflow, custom.node)
     logger.info(
         "Execução personalizada de nó (sub=%s, nó=%s, turno=%s, prompts=%s)",
         sub,
-        custom.node,
+        no_log,
         custom.turn,
         len(custom.prompts),
     )
@@ -192,7 +199,7 @@ async def _executar_no(requisicao, workflow, token, thread_id, collector, sub):
     except ReplayError as error:
         return JSONResponse(status_code=error.status, content={"detail": error.detail})
     except Exception as error:
-        logger.exception("Falha na execução personalizada do nó %s", custom.node)
+        logger.exception("Falha na execução personalizada do nó %s", no_log)
         return JSONResponse(
             status_code=500,
             content={
