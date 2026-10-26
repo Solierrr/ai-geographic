@@ -102,14 +102,58 @@ O nó que delega a escolha de produtos ao `ai-assistant` (A2A) continua chamando
 de verdade, com o JWT do usuário; essa chamada usa o fluxo normal do `ai-assistant` (não o
 modo debug dele) e aparece aqui só como a saída do nó.
 
+## Execução personalizada de um nó
+
+Reexecuta só um nó de um turno já feito, com os prompts `system` trocados, e para nele.
+
+```json
+{
+  "conversation_id": "t1", "message": "oi",
+  "custom": {
+    "turn": 0, "node": "router", "occurrence": 0, "stop_after_node": true,
+    "prompts": [{ "call": 0, "prompt": [{ "type": "system", "content": "texto novo" }, { "type": "human", "content": "oi" }] }]
+  }
+}
+```
+
+- `turn` é a posição do turno na conversa de debug (0 é o primeiro) e `occurrence` é a
+  qual execução do nó no turno (um nó pode repetir, como o router depois de um
+  especialista). `prompts[].call` é o índice da chamada de LLM dentro do nó.
+- O estado de entrada vem do checkpoint da thread `debug:<sub>:<conversation_id>`: ele
+  é copiado para uma thread descartável (apagada ao fim), o grafo roda só esse nó e
+  para nele. A conversa de debug original não muda.
+- Só mensagens `system` são trocadas, na mesma posição em que estavam no prompt; o
+  histórico e a pergunta do usuário nunca mudam.
+- A resposta traz só esse nó em `debug.nodes` e `debug.custom` com `node`, `turn`,
+  `occurrence`, `stopped: true`, `overrides_applied` e `next` (os nós que viriam em
+  seguida). `response` vem vazio.
+- Erros: `404` (turno, nó ou ocorrência inexistente), `409` (não foi possível
+  reconstruir a entrada do nó) e `422` (corpo inválido ou nó bloqueado).
+- `debug.turn` (resposta normal e `500`) é o índice do turno que acabou de rodar: é o
+  valor a enviar em `custom.turn` para reexecutar um nó dele. Vem `null` se o histórico
+  não pôde ser lido.
+- Nós que não podem ser reexecutados respondem `422` com o motivo. A lista (`REPLAY_BLOCKED_NODES` em `src/workflow/debug_replay.py`) está vazia.
+- A mesma chamada de LLM que o wrapper de modelo repete (execução externa e interna com
+  as mesmas mensagens) conta uma vez só, tanto no `debug` quanto no `call` dos `prompts`.
+- Se o prompt veio com `prompt_complete: false`, não o reenvie: o texto
+  mascarado substituiria o original.
+- Os checkpoints expiram em `CHECKPOINT_TTL_DIAS` (30 por padrão); depois disso o turno
+  responde `404`. A leitura do histórico para no máximo 2.000 checkpoints.
+- Cada reexecução deixa uma linha de log com o `sub`, o nó, o turno e a quantidade de
+  prompts, sem o conteúdo dos prompts.
+
+
 ## Limites e privacidade
 
 - CPF, CNPJ, telefone e e-mail são trocados por `[CPF]`, `[CNPJ]`, `[TELEFONE]` e
   `[EMAIL]` em todo o bloco `debug`.
 - `pii_map`, `user_id` e `user_memory` do estado nunca são copiados.
-- Cada texto é cortado em 4.000 caracteres e o bloco `debug` tem teto de 256 KB
-  (os limites por campo diminuem até caber). Quando algo é cortado, `truncated` é `true`.
-  Se mesmo assim passar do teto, as entradas e os prompts são omitidos.
+- Os prompts das chamadas de LLM saem inteiros, sem limite de tamanho, para poderem
+  ser editados na execução personalizada. Cada chamada de LLM traz `prompt_complete`,
+  que é `false` quando alguma mensagem `system` teve dado pessoal mascarado; nesse caso
+  o prompt não deve ser editado.
+- Os demais textos (entrada e saída dos nós, resposta do LLM) são cortados em 4.000
+  caracteres; quando algo é cortado, `truncated` é `true`.
 - Nada do debug é persistido: ele existe só na resposta do turno.
 
 ## O que o modo debug não grava

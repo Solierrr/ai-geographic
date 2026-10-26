@@ -2,7 +2,7 @@ import asyncio
 import json
 from types import SimpleNamespace
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 import src.workflow.observability.debug_tracker as debug_tracker
 from src.workflow.observability.debug_tracker import DebugTracker, mask_pii
@@ -264,8 +264,7 @@ def test_trunca_campo_grande_e_marca_truncated():
     assert debug["truncated"] is True
 
 
-def test_respeita_o_teto_total_de_bytes(monkeypatch):
-    monkeypatch.setattr(debug_tracker, "MAX_TOTAL_BYTES", 3000)
+def test_nao_ha_teto_total_e_nenhum_no_perde_o_prompt():
     tracker = DebugTracker()
 
     async def cenario():
@@ -281,9 +280,8 @@ def test_respeita_o_teto_total_de_bytes(monkeypatch):
     asyncio.run(cenario())
     debug = tracker.snapshot()
 
-    assert debug["truncated"] is True
     assert len(debug["nodes"]) == 40
-    assert all(node["input"] is None for node in debug["nodes"])
+    assert all(node["input"] is not None for node in debug["nodes"])
 
 
 def test_objetos_nao_serializaveis_viram_texto():
@@ -297,8 +295,7 @@ def test_objetos_nao_serializaveis_viram_texto():
     json.dumps(tracker.snapshot())
 
 
-def test_texto_longo_sem_separadores_e_cortado_rapido():
-    """Os padrões de PII são quadráticos; o corte vem antes da anonimização."""
+def test_prompt_longo_sem_separadores_sai_inteiro_e_rapido():
     import time
 
     collector = DebugTracker()
@@ -308,4 +305,148 @@ def test_texto_longo_sem_separadores_e_cortado_rapido():
     snapshot = collector.snapshot()
 
     assert time.perf_counter() - inicio < 5
-    assert snapshot["truncated"] is True
+    assert len(snapshot["llm_calls_outside_nodes"][0]["prompt"]) == 2_000_000
+    assert snapshot["truncated"] is False
+
+
+def _chamada_com_system(texto):
+    tracker = DebugTracker()
+
+    async def cenario():
+        await tracker.on_chain_start(
+            {}, {}, run_id="n", metadata=_meta("router"), name="router"
+        )
+        await tracker.on_chat_model_start(
+            {},
+            [[SystemMessage(content=texto), HumanMessage(content="oi")]],
+            run_id="l",
+            metadata=_meta("router"),
+        )
+        await tracker.on_llm_end(_resposta_llm(), run_id="l")
+        await tracker.on_chain_end({}, run_id="n")
+
+    asyncio.run(cenario())
+    return tracker.snapshot()
+
+
+def test_system_prompt_longo_sai_inteiro_e_pode_ser_editado():
+    texto = "regra. " * 3000
+    debug = _chamada_com_system(texto)
+
+    chamada = debug["nodes"][0]["llm_calls"][0]
+    assert chamada["prompt"][0]["content"] == texto
+    assert chamada["prompt_complete"] is True
+    assert debug["truncated"] is False
+
+
+def test_system_prompt_com_dado_pessoal_vem_mascarado_e_nao_editavel():
+    debug = _chamada_com_system("Fale com maria@exemplo.com para suporte.")
+
+    chamada = debug["nodes"][0]["llm_calls"][0]
+    assert "maria@exemplo.com" not in chamada["prompt"][0]["content"]
+    assert chamada["prompt_complete"] is False
+
+
+def test_system_prompt_enorme_sai_inteiro_e_editavel():
+    texto = "a" * 300_000
+    debug = _chamada_com_system(texto)
+
+    chamada = debug["nodes"][0]["llm_calls"][0]
+    assert chamada["prompt"][0]["content"] == texto
+    assert chamada["prompt_complete"] is True
+    assert debug["truncated"] is False
+
+
+def test_mensagem_do_historico_tambem_sai_inteira():
+    texto = "historico " * 5000
+    tracker = DebugTracker()
+
+    async def cenario():
+        await tracker.on_chain_start(
+            {}, {}, run_id="n", metadata=_meta("router"), name="router"
+        )
+        await tracker.on_chat_model_start(
+            {},
+            [[SystemMessage(content="regra"), HumanMessage(content=texto)]],
+            run_id="l",
+            metadata=_meta("router"),
+        )
+        await tracker.on_llm_end(_resposta_llm(), run_id="l")
+        await tracker.on_chain_end({}, run_id="n")
+
+    asyncio.run(cenario())
+    chamada = tracker.snapshot()["nodes"][0]["llm_calls"][0]
+
+    assert chamada["prompt"][1]["content"] == texto
+
+
+async def test_chamada_de_llm_duplicada_pelo_wrapper_conta_uma_vez():
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+
+    tracker = DebugTracker()
+    meta = {"langgraph_node": "router"}
+    await tracker.on_chain_start(
+        {}, {"route": ""}, run_id="n1", metadata=meta, name="router"
+    )
+    mensagens = [[SystemMessage(content="PROMPT"), HumanMessage(content="oi")]]
+    resposta = LLMResult(
+        generations=[[ChatGeneration(message=AIMessage(content="ok"))]]
+    )
+
+    await tracker.on_chat_model_start({}, mensagens, run_id="externa", metadata=meta)
+    await tracker.on_chat_model_start({}, mensagens, run_id="interna", metadata=meta)
+    await tracker.on_llm_end(resposta, run_id="interna")
+    await tracker.on_llm_end(resposta, run_id="externa")
+    await tracker.on_chain_end({}, run_id="n1")
+
+    chamadas = tracker.snapshot()["nodes"][0]["llm_calls"]
+    assert len(chamadas) == 1
+    assert chamadas[0]["completion"] == "ok"
+
+
+async def test_duas_chamadas_seguidas_com_mensagens_diferentes_continuam_separadas():
+    from langchain_core.messages import AIMessage, SystemMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+
+    tracker = DebugTracker()
+    meta = {"langgraph_node": "router"}
+    await tracker.on_chain_start(
+        {}, {"route": ""}, run_id="n1", metadata=meta, name="router"
+    )
+    resposta = LLMResult(
+        generations=[[ChatGeneration(message=AIMessage(content="ok"))]]
+    )
+    for run_id in ("a", "b"):
+        await tracker.on_chat_model_start(
+            {}, [[SystemMessage(content=run_id)]], run_id=run_id, metadata=meta
+        )
+        await tracker.on_llm_end(resposta, run_id=run_id)
+    await tracker.on_chain_end({}, run_id="n1")
+
+    assert len(tracker.snapshot()["nodes"][0]["llm_calls"]) == 2
+
+
+async def test_prompt_grande_com_muitos_nos_nao_e_descartado():
+    from langchain_core.messages import SystemMessage
+
+    tracker = DebugTracker()
+    meta = {"langgraph_node": "no"}
+    await tracker.on_chain_start({}, {}, run_id="n", metadata=meta, name="no")
+    await tracker.on_chat_model_start(
+        {}, [[SystemMessage(content="S" * 3_000_000)]], run_id="l", metadata=meta
+    )
+    await tracker.on_llm_end(_llm_ok("ok"), run_id="l")
+    await tracker.on_chain_end({}, run_id="n")
+
+    chamada = tracker.snapshot()["nodes"][0]["llm_calls"][0]
+
+    assert len(chamada["prompt"][0]["content"]) == 3_000_000
+    assert chamada["prompt_complete"] is True
+
+
+def _llm_ok(texto):
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+
+    return LLMResult(generations=[[ChatGeneration(message=AIMessage(content=texto))]])

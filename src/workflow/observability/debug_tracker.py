@@ -13,10 +13,9 @@ from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.messages import BaseMessage
 
 from src.core.guardrails.anonymize import PII_PATTERNS
+from src.workflow.observability.llm_dedupe import DuplicateRuns
 
 MAX_FIELD_CHARS = 4000
-MAX_TOTAL_BYTES = 256 * 1024
-_FIELD_LIMITS = (MAX_FIELD_CHARS, 1000, 250, 80)
 _CLIP_MARGIN = 256
 
 _INPUT_KEYS = (
@@ -74,10 +73,25 @@ def _prompt_messages(messages: list[BaseMessage]) -> list[dict[str, str]]:
     return [_jsonable(message) for message in messages]
 
 
+_EMAIL_LINEAR = r"[a-zA-Z0-9_.+-]{1,64}@[a-zA-Z0-9-]{1,255}\.[a-zA-Z0-9-.]{1,255}"
+
+
 def mask_pii(text: str) -> str:
     for kind, pattern in PII_PATTERNS:
+        if kind == "EMAIL":
+            pattern = _EMAIL_LINEAR
         text = re.sub(pattern, f"[{kind}]", text)
     return text
+
+
+def _whole(value: Any) -> Any:
+    if isinstance(value, str):
+        return mask_pii(value)
+    if isinstance(value, dict):
+        return {key: _whole(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_whole(item) for item in value]
+    return value
 
 
 class _Clipper:
@@ -100,6 +114,41 @@ class _Clipper:
         if isinstance(value, list):
             return [self.clean(item) for item in value]
         return value
+
+
+def _clean_system_message(message: Any, clipper: _Clipper) -> tuple[Any, bool]:
+    content = message["content"]
+    if not isinstance(content, str):
+        return message, False
+    text = mask_pii(content)
+    complete = text == content
+    if not complete:
+        clipper.clipped = True
+    return {**message, "content": text}, complete
+
+
+def _clean_call(call: dict[str, Any], clipper: _Clipper) -> dict[str, Any]:
+    prompt = call.get("prompt")
+    rest = {key: clipper.clean(value) for key, value in call.items() if key != "prompt"}
+    if not isinstance(prompt, list):
+        return {**rest, "prompt": _whole(prompt), "prompt_complete": False}
+    cleaned, complete = [], True
+    for message in prompt:
+        if isinstance(message, dict) and message.get("type") == "system":
+            kept, whole = _clean_system_message(message, clipper)
+            cleaned.append(kept)
+            complete = complete and whole
+        else:
+            cleaned.append(_whole(message))
+    return {**rest, "prompt": cleaned, "prompt_complete": complete}
+
+
+def _clean_node(node: dict[str, Any], clipper: _Clipper) -> dict[str, Any]:
+    cleaned = {
+        key: clipper.clean(value) for key, value in node.items() if key != "llm_calls"
+    }
+    cleaned["llm_calls"] = [_clean_call(call, clipper) for call in node["llm_calls"]]
+    return cleaned
 
 
 def _usage(response: Any) -> tuple[int | None, int | None, str | None]:
@@ -145,6 +194,7 @@ class DebugTracker(AsyncCallbackHandler):
         self._starts: dict[Any, float] = {}
         self._llm_runs: dict[Any, dict[str, Any]] = {}
         self._orphan_llm: list[dict[str, Any]] = []
+        self._dedupe = DuplicateRuns()
         self.started_at = time.perf_counter()
 
     # --- nós do grafo -----------------------------------------------------
@@ -212,6 +262,9 @@ class DebugTracker(AsyncCallbackHandler):
     async def on_chat_model_start(
         self, serialized, messages, *, run_id, metadata=None, **kwargs
     ):
+        node = (metadata or {}).get("langgraph_node")
+        if self._dedupe.start(run_id, node, messages):
+            return
         flat = [m for group in messages for m in group]
         self._start_llm(run_id, _prompt_messages(flat), metadata)
 
@@ -241,6 +294,8 @@ class DebugTracker(AsyncCallbackHandler):
         (record["llm_calls"] if record else self._orphan_llm).append(call)
 
     async def on_llm_end(self, response, *, run_id, **kwargs):
+        if self._dedupe.finish(run_id):
+            return
         tokens_in, tokens_out, model = _usage(response)
         self._finish_llm(
             run_id,
@@ -253,6 +308,8 @@ class DebugTracker(AsyncCallbackHandler):
         )
 
     async def on_llm_error(self, error, *, run_id, **kwargs):
+        if self._dedupe.finish(run_id):
+            return
         self._finish_llm(run_id, {"error": f"{type(error).__name__}: {error}"})
 
     # --- resultado --------------------------------------------------------
@@ -271,23 +328,15 @@ class DebugTracker(AsyncCallbackHandler):
                 judge_retries = output["judge_retries"]
 
         nodes = [dict(record) for record in self._nodes]
-        for limit in _FIELD_LIMITS:
-            clipper = _Clipper(limit)
-            body = {
-                "route": route,
-                "judge": {"status": judge_status, "retries": judge_retries},
-                "nodes": clipper.clean(nodes),
-                "llm_calls_outside_nodes": clipper.clean(self._orphan_llm),
-            }
-            size = len(json.dumps(body, ensure_ascii=False, default=str).encode())
-            if size <= MAX_TOTAL_BYTES:
-                break
-        if size > MAX_TOTAL_BYTES:
-            for node in body["nodes"]:
-                node["input"] = None
-                for call in node["llm_calls"]:
-                    call["prompt"] = None
-            body["llm_calls_outside_nodes"] = []
-        body["truncated"] = clipper.clipped or size > MAX_TOTAL_BYTES
+        clipper = _Clipper(MAX_FIELD_CHARS)
+        body = {
+            "route": route,
+            "judge": {"status": judge_status, "retries": judge_retries},
+            "nodes": [_clean_node(node, clipper) for node in nodes],
+            "llm_calls_outside_nodes": [
+                _clean_call(call, clipper) for call in self._orphan_llm
+            ],
+        }
+        body["truncated"] = clipper.clipped
         body["duration_ms"] = round((time.perf_counter() - self.started_at) * 1000, 1)
         return body
