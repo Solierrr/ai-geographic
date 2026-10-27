@@ -1,7 +1,9 @@
 """Modo debug do agente de campo: roda um turno e devolve o que cada nó do grafo
 recebeu e devolveu. Só para uso interno: sempre ativo, mas restrito aos admins,
-fora do OpenAPI e restrito aos `sub` de `DEBUG_ADMIN_SUBS`. Não grava nada no
-api-messenger nem na memória de longo prazo."""
+fora do OpenAPI e restrito aos `sub` de `DEBUG_ADMIN_SUBS`. O turno normal grava
+conversa, mensagens e steps no api-messenger (para aparecer em Conversas e
+Dashboards), mas não grava na memória de longo prazo; a execução personalizada de
+um nó não grava nada."""
 
 import asyncio
 import logging
@@ -130,6 +132,7 @@ async def conversar_com_debug(
             compiled_app,
             user_token=token,
             persist=False,
+            save_history=True,
             extra_callbacks=[collector],
         )
     except Exception as error:
@@ -149,7 +152,7 @@ async def conversar_com_debug(
     metadata = final_message.additional_kwargs
     debug = collector.snapshot()
     debug["environment"] = settings.ENVIRONMENT
-    debug["persisted"] = False
+    debug["persisted"] = True
     debug["turn"] = await _last_turn(compiled_app, thread_id)
     return DebugChatResponse(
         response=final_message.content,
