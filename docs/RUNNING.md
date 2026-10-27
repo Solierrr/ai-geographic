@@ -56,7 +56,7 @@ O serviço envia traces, métricas e logs por OTLP pelo wrapper `opentelemetry-i
 ```text
 OTEL_SDK_DISABLED=false
 OTEL_SERVICE_NAME=ai-geographic
-OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_RESOURCE_ATTRIBUTES=service.namespace=solaria,deployment.environment=local
 OTEL_PYTHON_LOG_CORRELATION=true
