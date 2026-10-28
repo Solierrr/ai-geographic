@@ -5,14 +5,29 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     MONGO_URI: str = Field(
         "mongodb://localhost:27017",
-        validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI"),
+        validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI", "DB_MONGO_URI"),
     )
     CHECKPOINT_TTL_DIAS: int = 30
 
-    UPSTASH_REDIS_HOST: str | None = None
-    UPSTASH_REDIS_PORT: int = 6379
-    UPSTASH_REDIS_USERNAME: str = "default"
-    UPSTASH_REDIS_PASSWORD: str | None = None
+    # O Infisical guarda o Redis dos agentes como UPSTASH_AGENTS_*.
+    UPSTASH_REDIS_HOST: str | None = Field(
+        None, validation_alias=AliasChoices("UPSTASH_REDIS_HOST", "UPSTASH_AGENTS_HOST")
+    )
+    UPSTASH_REDIS_PORT: int = Field(
+        6379, validation_alias=AliasChoices("UPSTASH_REDIS_PORT", "UPSTASH_AGENTS_PORT")
+    )
+    UPSTASH_REDIS_USERNAME: str = Field(
+        "default",
+        validation_alias=AliasChoices(
+            "UPSTASH_REDIS_USERNAME", "UPSTASH_AGENTS_USERNAME"
+        ),
+    )
+    UPSTASH_REDIS_PASSWORD: str | None = Field(
+        None,
+        validation_alias=AliasChoices(
+            "UPSTASH_REDIS_PASSWORD", "UPSTASH_AGENTS_PASSWORD"
+        ),
+    )
 
     API_MESSENGER_URL: str | None = None
     SERVICE_KEY: str | None = Field(
@@ -35,7 +50,10 @@ class Settings(BaseSettings):
     GOOGLE_MAPS_API_KEY: str | None = None
 
     # google-registry: viabilidade solar do telhado (Solar API do Google).
-    REGISTRY_URL: str = "http://localhost:8004"
+    REGISTRY_URL: str = Field(
+        "http://localhost:8000",
+        validation_alias=AliasChoices("REGISTRY_URL", "GOOGLE_REGISTRY_URL"),
+    )
     REGISTRY_CONSUMER_TOKEN: str | None = None
 
     # A2A: o ai-assistant recebe a delegação de recomendação de produtos.

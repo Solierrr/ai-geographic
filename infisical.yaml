@@ -1,0 +1,21 @@
+# Pastas do Infisical que este repositório lê. Serve de documentação e de base
+# para a checagem do .env.example; o Render não usa este arquivo.
+folders:
+  - /database
+  - /redis
+  - /llm
+  - /service-urls
+  - /mcp
+  - /service-keys
+  - /otel
+  - /auth
+  - /google
+# Variáveis do .env.example que não vêm do Infisical.
+ignore:
+  - TEST_USER_TOKEN
+# Variáveis que só não existem em um ambiente.
+ignore_by_env:
+  local:
+    - UPSTASH_AGENTS_PASSWORD
+  qa:
+    - OTEL_EXPORTER_OTLP_ENDPOINT
