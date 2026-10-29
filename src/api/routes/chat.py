@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Header, HTTPException
 
+from src.api.auth import require_valid_token
 from src.api.schemas.chat import ChatRequest, ChatResponse
 from src.workflow.runner import execute_turn
 
@@ -16,6 +17,7 @@ async def conversar(
             status_code=401, detail="Authorization header deve ser 'Bearer <token>'"
         )
     user_token = authorization.removeprefix("Bearer ")
+    await require_valid_token(user_token)
 
     from src.workflow.graph.graph import compiled_app
 
