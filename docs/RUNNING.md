@@ -61,3 +61,7 @@ OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 OTEL_RESOURCE_ATTRIBUTES=service.namespace=solaria,deployment.environment=local
 OTEL_PYTHON_LOG_CORRELATION=true
 ```
+
+## Autenticação e CORS do `/chat`
+
+O `POST /chat` valida o JWT do `api-auth` (RS256 via `JWT_JWKS_URL`, emissor `JWT_ISSUER`) antes de rodar o turno: token inválido, expirado ou de refresh responde `401`. Fora do ambiente `LOCAL`, sem `JWT_JWKS_URL` a rota responde `503` em vez de ficar aberta. As origens do navegador autorizadas vêm de `CORS_ALLOWED_ORIGINS` (lista separada por vírgula, sem credenciais e sem `*`).
