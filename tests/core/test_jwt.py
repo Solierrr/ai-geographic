@@ -4,7 +4,7 @@ import jwt as pyjwt
 import pytest
 
 import src.core.security.jwt as jwt_module
-from src.core.security.jwt import decode_user_id
+from src.core.security.jwt import decode_user_id, is_valid_access_token
 
 
 @pytest.fixture(autouse=True)
@@ -60,3 +60,56 @@ def test_decode_user_id_retorna_none_quando_claim_sub_ausente(monkeypatch):
     )
 
     assert decode_user_id("token-sem-sub") is None
+
+
+def _com_claims(monkeypatch, claims):
+    jwk_client = Mock()
+    jwk_client.get_signing_key_from_jwt.return_value = Mock(key="chave-publica-fake")
+    monkeypatch.setattr(jwt_module, "_get_jwk_client", lambda: jwk_client)
+    monkeypatch.setattr(jwt_module.pyjwt, "decode", lambda *a, **k: claims)
+
+
+def test_is_valid_access_token_aceita_access_token(monkeypatch):
+    _com_claims(monkeypatch, {"sub": "user-123", "token_type": "access"})
+
+    assert is_valid_access_token("token-qualquer") is True
+
+
+def test_is_valid_access_token_aceita_token_sem_token_type(monkeypatch):
+    _com_claims(monkeypatch, {"sub": "user-123"})
+
+    assert is_valid_access_token("token-qualquer") is True
+
+
+def test_is_valid_access_token_rejeita_refresh_token(monkeypatch):
+    _com_claims(monkeypatch, {"sub": "user-123", "token_type": "refresh"})
+
+    assert is_valid_access_token("token-de-refresh") is False
+
+
+def test_is_valid_access_token_rejeita_assinatura_invalida(monkeypatch):
+    jwk_client = Mock()
+    jwk_client.get_signing_key_from_jwt.side_effect = pyjwt.exceptions.DecodeError(
+        "token malformado"
+    )
+    monkeypatch.setattr(jwt_module, "_get_jwk_client", lambda: jwk_client)
+
+    assert is_valid_access_token("token-invalido") is False
+
+
+def test_is_valid_access_token_exige_exp_e_sub(monkeypatch):
+    jwk_client = Mock()
+    jwk_client.get_signing_key_from_jwt.return_value = Mock(key="chave-publica-fake")
+    monkeypatch.setattr(jwt_module, "_get_jwk_client", lambda: jwk_client)
+    capturado = {}
+
+    def decode(*args, **kwargs):
+        capturado.update(kwargs)
+        return {"sub": "user-123"}
+
+    monkeypatch.setattr(jwt_module.pyjwt, "decode", decode)
+
+    is_valid_access_token("token-qualquer")
+
+    assert capturado["options"] == {"require": ["exp", "sub"]}
+    assert capturado["algorithms"] == ["RS256"]

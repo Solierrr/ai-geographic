@@ -25,3 +25,20 @@ def decode_user_id(token: str) -> str | None:
         return payload.get("sub")
     except Exception:  # noqa: BLE001
         return None
+
+
+def is_valid_access_token(token: str) -> bool:
+    """Valida o access token do api-auth: assinatura RS256 via JWKS, emissor, `exp` e
+    `sub`. Rejeita tokens que declaram outro `token_type` (por exemplo, refresh)."""
+    try:
+        signing_key = _get_jwk_client().get_signing_key_from_jwt(token)
+        payload = pyjwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=settings.JWT_ISSUER,
+            options={"require": ["exp", "sub"]},
+        )
+    except Exception:  # noqa: BLE001
+        return False
+    return payload.get("token_type", "access") == "access"
