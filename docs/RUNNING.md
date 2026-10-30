@@ -51,16 +51,24 @@ uvicorn src.api.app:app --reload
 
 ## Telemetria (OpenTelemetry)
 
-O serviço envia traces, métricas e logs por OTLP pelo wrapper `opentelemetry-instrument` (auto-instrumentação de FastAPI e `logging`), sem código na aplicação. Ele só é usado quando `OTEL_SDK_DISABLED=false`; sem isso o serviço sobe como antes. Para ver a telemetria localmente, suba o Grafana local com `make obs-up` no repositório `infra-otel-collector` (ver `docs-warehouse/helps/TRY-LOCAL.md`).
+A telemetria é ligada pelo próprio código, em `setup_observability` (`src/core/observability/observability.py`), chamada em `src/api/app.py`. Não há wrapper nem `opentelemetry-instrument`. A app envia traces, métricas e logs por OTLP/HTTP para `OTEL_EXPORTER_OTLP_ENDPOINT` (padrão `http://localhost:4318`). Ficam instrumentados as requisições HTTP de entrada, as chamadas httpx, o Mongo (pymongo) e o Redis.
+
+- O nome do serviço é fixo no código (`ai-geographic`); não existe `OTEL_SERVICE_NAME`.
+- `/health` não gera span nem métrica.
+- Toda resposta traz o header `X-Trace-Id`, e os erros trazem `traceId` no corpo.
+- Para desligar (por exemplo, em testes), use `OTEL_SDK_DISABLED=true`. Sem isso, a telemetria fica ligada.
+
+Para ver a telemetria localmente, suba o Grafana local com `make obs-up` no repositório `infra-otel-collector` (ver `docs-warehouse/helps/TRY-LOCAL.md`).
 
 ```text
-OTEL_SDK_DISABLED=false
-OTEL_SERVICE_NAME=ai-geographic
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
-OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-OTEL_RESOURCE_ATTRIBUTES=service.namespace=solaria,deployment.environment=local
-OTEL_PYTHON_LOG_CORRELATION=true
+SERVICE_VERSION=dev
+DEPLOYMENT_ENVIRONMENT=local
+OTEL_TRACES_SAMPLING_PROBABILITY=1.0
+# OTEL_SDK_DISABLED=true
 ```
+
+Erros de validação respondem `400` com `VALIDATION_ERROR` e `errors[{field, message}]`. Os demais erros seguem o corpo `application/problem+json` (RFC 9457), com `errorCode`, `detail` e `traceId`.
 
 ## Autenticação e CORS do `/chat`
 

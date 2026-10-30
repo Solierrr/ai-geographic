@@ -128,7 +128,7 @@ Reexecuta só um nó de um turno já feito, com os prompts `system` trocados, e 
   `occurrence`, `stopped: true`, `overrides_applied` e `next` (os nós que viriam em
   seguida). `response` vem vazio.
 - Erros: `404` (turno, nó ou ocorrência inexistente), `409` (não foi possível
-  reconstruir a entrada do nó) e `422` (corpo inválido ou nó bloqueado).
+  reconstruir a entrada do nó), `400` (corpo inválido, `VALIDATION_ERROR`) e `422` (nó bloqueado).
 - `debug.turn` (resposta normal e `500`) é o índice do turno que acabou de rodar: é o
   valor a enviar em `custom.turn` para reexecutar um nó dele. Vem `null` se o histórico
   não pôde ser lido.

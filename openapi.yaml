@@ -31,12 +31,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatAcceptedResponse'
-        '422':
-          description: Validation Error
+        '400':
+          description: Validation Error (VALIDATION_ERROR)
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ValidationProblemDetail'
       security:
       - bearerAuth: []
   /chat/{event_id}:
@@ -63,12 +63,12 @@ paths:
                 $ref: '#/components/schemas/ChatResultResponse'
         '404':
           description: Evento não encontrado ou resultado expirado.
-        '422':
-          description: Validation Error
+        '400':
+          description: Validation Error (VALIDATION_ERROR)
           content:
-            application/json:
+            application/problem+json:
               schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+                $ref: '#/components/schemas/ValidationProblemDetail'
       security: []
   /health:
     get:
@@ -199,41 +199,59 @@ components:
       - status
       title: ChatResultResponse
       description: Estado temporário do processamento assíncrono.
-    HTTPValidationError:
-      properties:
-        detail:
-          items:
-            $ref: '#/components/schemas/ValidationError'
-          type: array
-          title: Detail
-      type: object
-      title: HTTPValidationError
-    ValidationError:
-      properties:
-        loc:
-          items:
-            anyOf:
-            - type: string
-            - type: integer
-          type: array
-          title: Location
-        msg:
-          type: string
-          title: Message
-        type:
-          type: string
-          title: Error Type
-        input:
-          title: Input
-        ctx:
-          type: object
-          title: Context
+    ProblemDetail:
+      description: "Corpo de todo erro (application/problem+json, RFC 9457). O cliente decide pelo errorCode; detail é texto para humanos."
       type: object
       required:
-      - loc
-      - msg
-      - type
-      title: ValidationError
+      - title
+      - status
+      - detail
+      - errorCode
+      - timestamp
+      properties:
+        title:
+          type: string
+          description: "Reason phrase do status (ex.: Bad Request)."
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          description: Caminho da requisição.
+        errorCode:
+          type: string
+          description: "Código estável em UPPER_SNAKE (ex.: VALIDATION_ERROR, UNAUTHENTICATED, ACCESS_DENIED, RESOURCE_NOT_FOUND, INTERNAL_ERROR)."
+        timestamp:
+          type: string
+          format: date-time
+        traceId:
+          type: string
+          description: Presente só quando há span ativo.
+      additionalProperties: true
+      title: ProblemDetail
+    ValidationProblemDetail:
+      description: "Erro de validação de entrada (400 VALIDATION_ERROR). field e message são os nativos do Pydantic (ex.: items.0.qty, Field required)."
+      allOf:
+      - $ref: '#/components/schemas/ProblemDetail'
+      - type: object
+        required:
+        - errors
+        properties:
+          errors:
+            type: array
+            items:
+              type: object
+              required:
+              - field
+              - message
+              properties:
+                field:
+                  type: string
+                  nullable: true
+                message:
+                  type: string
+      title: ValidationProblemDetail
   securitySchemes:
     bearerAuth:
       type: http
