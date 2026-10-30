@@ -39,6 +39,7 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "LOCAL"
 
+    DOCS_ENABLED: bool = True
     CORS_ALLOWED_ORIGINS: str = (
         "http://localhost:5173,http://localhost:3000,http://localhost:5174,"
         "http://127.0.0.1:5174,https://web-sandbox-7ug0.onrender.com"

@@ -20,6 +20,7 @@ from src.core.config.settings import settings
 from src.core.security.jwt import decode_user_id
 from src.workflow.debug_replay import ReplayError, count_turns
 from src.workflow.observability.debug_tracker import DebugTracker, mask_pii
+from src.workflow.outcome import Outcome
 from src.workflow.runner import execute_single_node, execute_turn
 
 logger = logging.getLogger(__name__)
@@ -156,6 +157,8 @@ async def conversar_com_debug(
     debug["turn"] = await _last_turn(compiled_app, thread_id)
     return DebugChatResponse(
         response=final_message.content,
+        outcome=final_state.get("outcome", Outcome.ANSWERED),
+        reason=final_state.get("reason"),
         specialists_used=metadata.get("specialists_used", []),
         workflow_steps=metadata.get(
             "workflow_steps", final_state.get("turn_agents", [])
@@ -221,4 +224,4 @@ async def _executar_no(requisicao, workflow, token, thread_id, collector, sub):
         "overrides_applied": aplicados,
         "next": list(proximos),
     }
-    return DebugChatResponse(response="", debug=debug)
+    return DebugChatResponse(response="", outcome=Outcome.ANSWERED, debug=debug)
