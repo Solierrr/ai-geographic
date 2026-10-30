@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import chat, debug
 from src.core.config.settings import settings
 from src.core.llm.keys import key_client
+from src.core.observability.errors import register_error_handlers
+from src.core.observability.observability import setup_observability
 from src.infra.database.mongo.indexes.user_memory_indexes import (
     ensure_user_memory_indexes,
 )
@@ -27,6 +29,10 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# observabilidade antes dos handlers -> os erros usam o span criado pela instrumentação
+setup_observability(app, "ai-geographic")
+register_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
