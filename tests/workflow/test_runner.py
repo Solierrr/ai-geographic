@@ -6,6 +6,7 @@ import pytest
 from langchain_core.messages import AIMessage
 
 import src.workflow.runner as runner
+from src.workflow.outcome import Outcome, Reason
 
 
 def test_execute_turn_persists_anonymized_request_and_audited_response(monkeypatch):
@@ -236,6 +237,39 @@ def test_execute_turn_nao_propaga_falha_da_atualizacao_de_memoria(monkeypatch):
     assert resultado["messages"][0].content == "resposta"
 
 
+def test_execute_turn_devolve_outcome_e_reason(monkeypatch):
+    async def ainvoke(state, config):
+        config["callbacks"][0].issues.append(
+            (Outcome.TOOL_FAILED, Reason.MAPS_UNAVAILABLE)
+        )
+        return {
+            "messages": [
+                AIMessage(
+                    content="oi",
+                    additional_kwargs={"workflow_steps": ["route_planner"]},
+                )
+            ]
+        }
+
+    workflow = Mock()
+    workflow.ainvoke = ainvoke
+    monkeypatch.setattr(runner, "enviar_mensagem_usuario", AsyncMock())
+    monkeypatch.setattr(runner, "enviar_mensagem_chatbot", AsyncMock())
+    monkeypatch.setattr(
+        runner, "_conversations_por_thread", {"conversation-1": "api-conv-1"}
+    )
+    monkeypatch.setattr(runner, "criar_conversa_chatbot", AsyncMock())
+    monkeypatch.setattr(
+        runner, "anonymize_text", Mock(side_effect=[("a", {}), ("b", {})])
+    )
+    monkeypatch.setattr(runner, "decode_user_id", Mock(return_value=None))
+
+    final_state = asyncio.run(
+        runner.execute_turn("conversation-1", "texto", workflow, user_token="t")
+    )
+
+    assert final_state["outcome"] == Outcome.TOOL_FAILED
+    assert final_state["reason"] == Reason.MAPS_UNAVAILABLE
 def _executar_debug_com_historico(monkeypatch, count_turns_mock=None):
     workflow = Mock()
     workflow.ainvoke = AsyncMock(

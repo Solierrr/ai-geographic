@@ -2,15 +2,17 @@ import httpx
 from langchain_core.tools import tool
 
 from src.core.config.settings import settings
+from src.workflow.outcome import Outcome, Reason, record_issue
 
 _TIMEOUT_SEGUNDOS = 20.0
 _SEGMENTOS_MOSTRADOS = 3
 
 
 def _headers() -> dict[str, str]:
+    headers = {"X-Service-Key": settings.SERVICE_KEY} if settings.SERVICE_KEY else {}
     if settings.REGISTRY_CONSUMER_TOKEN:
-        return {"Authorization": f"Bearer {settings.REGISTRY_CONSUMER_TOKEN}"}
-    return {}
+        headers["Authorization"] = f"Bearer {settings.REGISTRY_CONSUMER_TOKEN}"
+    return headers
 
 
 def _resumir(dados: dict) -> dict:
@@ -48,9 +50,11 @@ async def consultar_viabilidade_solar(latitude: float, longitude: float) -> dict
                 params={"latitude": latitude, "longitude": longitude},
             )
     except httpx.HTTPError:
+        record_issue(Outcome.TOOL_FAILED, Reason.SOLAR_DATA_UNAVAILABLE)
         return {"erro": "Não consegui consultar a viabilidade solar agora."}
     if resposta.status_code == 404:
         return {"erro": "Não há cobertura de dados solares do Google para esse ponto."}
     if resposta.status_code >= 400:
+        record_issue(Outcome.TOOL_FAILED, Reason.SOLAR_DATA_UNAVAILABLE)
         return {"erro": "Não consegui consultar a viabilidade solar agora."}
     return _resumir(resposta.json())

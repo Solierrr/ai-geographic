@@ -20,6 +20,7 @@ from src.infra.database.mongo.repositories.user_memory_repository import (
 from src.workflow.debug_replay import count_turns, run_single_node
 from src.workflow.memory.memory_extraction import extrair_fatos_atualizados
 from src.workflow.observability.step_tracker import StepTracker
+from src.workflow.outcome import resolve_outcome, start_turn
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ async def execute_turn(
     no api-messenger."""
     saves = persist or save_history
     current_user_token.set(user_token)
+    issues = start_turn()
     turn_id = str(uuid4())
     tracker: StepTracker | None = None
     if saves:
@@ -110,7 +112,7 @@ async def execute_turn(
             api_conversation_id, anonymized_user_input, user_token
         )
 
-        tracker = StepTracker(conversation_id=api_conversation_id)
+        tracker = StepTracker(conversation_id=api_conversation_id, issues=issues)
 
     user_id = await asyncio.to_thread(decode_user_id, user_token)
     fatos_existentes = await get_user_memory(user_id) if persist and user_id else []
@@ -132,10 +134,16 @@ async def execute_turn(
         },
     )
 
-    if not saves:
-        return final_state
-
     final_message = final_state["messages"][-1]
+    outcome, reason = resolve_outcome(
+        final_message.additional_kwargs.get(
+            "workflow_steps", final_state.get("turn_agents", [])
+        ),
+        issues,
+    )
+    if not saves:
+        return {**final_state, "outcome": outcome, "reason": reason}
+
     anonymized_assistant_response, _ = anonymize_text(final_message.content)
     message_metadata = final_message.additional_kwargs
     thread_turn = None if persist else await _thread_turn(workflow, conversation_id)
@@ -156,7 +164,7 @@ async def execute_turn(
         ultima_troca = f"Usuário: {user_input}\nAssistente: {final_message.content}"
         _agendar_atualizacao_memoria(user_id, fatos_existentes, ultima_troca)
 
-    return final_state
+    return {**final_state, "outcome": outcome, "reason": reason}
 
 
 async def execute_single_node(

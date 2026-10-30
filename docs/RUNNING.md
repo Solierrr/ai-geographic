@@ -49,6 +49,10 @@ pip install -r requirements.txt
 uvicorn src.api.app:app --reload
 ```
 
+## Autenticação local
+
+O JWT de usuário vem do `api-auth` de verdade, sem emissor falso: suba a stack local com `make dev-up` no `database-console` e aponte `JWT_JWKS_URL` para o JWKS dele (`http://localhost:8081/.well-known/jwks.json`). Para conversar pelo terminal, rode `python main.py` e informe o access token obtido no login do `api-auth` local.
+
 ## Telemetria (OpenTelemetry)
 
 A telemetria é ligada pelo próprio código, em `setup_observability` (`src/core/observability/observability.py`), chamada em `src/api/app.py`. Não há wrapper nem `opentelemetry-instrument`. A app envia traces, métricas e logs por OTLP/HTTP para `OTEL_EXPORTER_OTLP_ENDPOINT` (padrão `http://localhost:4318`). Ficam instrumentados as requisições HTTP de entrada, as chamadas httpx, o Mongo (pymongo) e o Redis.
@@ -67,8 +71,6 @@ DEPLOYMENT_ENVIRONMENT=local
 OTEL_TRACES_SAMPLING_PROBABILITY=1.0
 # OTEL_SDK_DISABLED=true
 ```
-
-Erros de validação respondem `400` com `VALIDATION_ERROR` e `errors[{field, message}]`. Os demais erros seguem o corpo `application/problem+json` (RFC 9457), com `errorCode`, `detail` e `traceId`.
 
 ## Autenticação e CORS do `/chat`
 

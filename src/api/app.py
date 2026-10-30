@@ -2,15 +2,17 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
 
-from src.api.routes import chat, debug
+from src.api.errors import PROBLEM_JSON, ProblemDetail, register_error_handlers
+from src.api.routes import chat, debug, health
 from src.core.config.settings import settings
 from src.core.llm.keys import key_client
-from src.core.observability.errors import register_error_handlers
 from src.core.observability.observability import setup_observability
 from src.infra.database.mongo.indexes.user_memory_indexes import (
     ensure_user_memory_indexes,
 )
+from src.version import VERSION
 
 
 def cors_origins(raw: str) -> list[str]:
@@ -24,15 +26,41 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Solaria Campo API",
-    description="Copiloto de campo do profissional de energia solar: rotas, clima e índice solar aproximado.",
-    version="0.1.0",
+    title="Solaria — ai-geographic",
+    description=(
+        "Copiloto de campo do profissional de energia solar: planeja a rota até o "
+        "cliente, avalia clima e luz do dia de uma região em uma data e estima o "
+        "potencial solar do local. Autentique com o JWT do api-auth."
+    ),
+    version=VERSION,
+    contact={"name": "Solaria", "url": "https://github.com/Solierrr"},
+    license_info={
+        "name": "CC0-1.0",
+        "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    },
+    servers=[
+        {"url": "https://ai-geographic.onrender.com", "description": "QA"},
+        {"url": "http://localhost:8000", "description": "Local"},
+    ],
+    openapi_tags=[
+        {"name": "Conversa", "description": "Turnos de conversa com o copiloto."},
+        {"name": "Saúde", "description": "Vivo e pronto do serviço."},
+    ],
+    docs_url="/docs" if settings.DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if settings.DOCS_ENABLED else None,
+    redoc_url=None,
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+        "tryItOutEnabled": True,
+        "tagsSorter": "alpha",
+        "operationsSorter": "alpha",
+    },
     lifespan=lifespan,
 )
 
 # observabilidade antes dos handlers -> os erros usam o span criado pela instrumentação
 setup_observability(app, "ai-geographic")
-register_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,21 +70,60 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
+register_error_handlers(app)
+
 app.include_router(chat.router)
+app.include_router(health.router)
 app.include_router(debug.router)
 
 
-@app.get("/health")
-def health() -> dict:
-    """Responde 'ok' se o servidor subiu, listando configuração ausente."""
-    configured = key_client().providers()
-    missing = [
-        f"{provider.upper()}_API_KEY"
-        for provider in ("gemini", "groq")
-        if provider not in configured
-    ]
-
-    return {
-        "status": "ok" if not missing else "atencao",
-        "missing_settings": missing,
+def _problem_detail_responses(schema: dict) -> None:
+    schemas = schema.setdefault("components", {}).setdefault("schemas", {})
+    schemas.pop("HTTPValidationError", None)
+    schemas.pop("ValidationError", None)
+    problem = {
+        PROBLEM_JSON: {"schema": {"$ref": "#/components/schemas/ProblemDetail"}}
     }
+    for path in schema["paths"].values():
+        for operation in path.values():
+            responses = operation["responses"]
+            responses.setdefault("500", {"description": "Erro interno inesperado"})
+            for code, response in responses.items():
+                if code.startswith(("4", "5")):
+                    response["content"] = problem
+    problem_schema = ProblemDetail.model_json_schema(
+        ref_template="#/components/schemas/{model}"
+    )
+    schemas.update(problem_schema.pop("$defs", {}))
+    schemas["ProblemDetail"] = problem_schema
+
+
+def build_openapi(include_internal: bool) -> dict:
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+        servers=app.servers,
+        contact=app.contact,
+        license_info=app.license_info,
+    )
+    if not include_internal:
+        schema["paths"] = {
+            path: item
+            for path, item in schema["paths"].items()
+            if not path.startswith("/internal/")
+        }
+    schema["security"] = [{"bearerAuth": []}]
+    _problem_detail_responses(schema)
+    return schema
+
+
+def public_openapi() -> dict:
+    if app.openapi_schema is None:
+        app.openapi_schema = build_openapi(include_internal=False)
+    return app.openapi_schema
+
+
+app.openapi = public_openapi

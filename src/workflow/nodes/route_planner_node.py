@@ -6,6 +6,7 @@ from src.agents.base.base_agent import build_agent
 from src.agents.specialist.route_planner.route_planner_prompt import ROUTE_PLANNER_AGENT
 from src.infra.mcp.client import get_mcp_tools_by_name
 from src.workflow.nodes.context import messages_with_summary
+from src.workflow.outcome import Outcome, Reason, record_issue
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent
 
@@ -22,6 +23,7 @@ async def route_planner_node(state: GraphState, config=None) -> dict:
         )
     except Exception:
         logger.exception("Falha ao carregar as tools do MCP do Maps")
+        record_issue(Outcome.TOOL_FAILED, Reason.MAPS_UNAVAILABLE)
         return {
             "messages": [AIMessage(content=_INDISPONIVEL)],
             "turn_agents": turn_agents,
