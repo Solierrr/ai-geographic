@@ -8,6 +8,7 @@ from langchain_core.callbacks import AsyncCallbackHandler
 
 from src.core.config.model_pricing import get_pricing
 from src.infra.api_messenger.client import enviar_observabilidade
+from src.workflow.outcome import Outcome, Reason
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,13 @@ def _categorizar_erro_tool(error: Exception) -> str:
 
 
 class StepTracker(AsyncCallbackHandler):
-    def __init__(self, conversation_id: str):
+    def __init__(
+        self,
+        conversation_id: str,
+        issues: list[tuple[Outcome, Reason]] | None = None,
+    ):
         self.conversation_id = conversation_id
+        self.issues = issues if issues is not None else []
         self.step_order = 0
         self._starts = {}
         self._node_by_run = {}
@@ -106,6 +112,7 @@ class StepTracker(AsyncCallbackHandler):
         )
 
     async def on_llm_error(self, error, *, run_id, **kwargs):
+        self.issues.append((Outcome.DEGRADED, Reason.LLM_FALLBACK))
         latency_ms = (
             time.perf_counter() - self._starts.pop(run_id, time.perf_counter())
         ) * 1000
@@ -158,6 +165,7 @@ class StepTracker(AsyncCallbackHandler):
         )
 
     async def on_tool_error(self, error, *, run_id, **kwargs):
+        self.issues.append((Outcome.TOOL_FAILED, Reason.TOOL_ERROR))
         latency_ms = (
             time.perf_counter() - self._starts.pop(run_id, time.perf_counter())
         ) * 1000

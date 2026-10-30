@@ -5,6 +5,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 
 from src.core.config.settings import settings
 from src.core.security.request_context import current_user_token
+from src.workflow.outcome import Outcome, Reason, record_issue
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent
 
@@ -42,6 +43,7 @@ async def product_advisor_node(state: GraphState, config=None) -> dict:
         )
     except DelegationError:
         logger.exception("Falha ao delegar ao ai-assistant")
+        record_issue(Outcome.TOOL_FAILED, Reason.PRODUCT_ADVISOR_UNAVAILABLE)
         return {
             "messages": [AIMessage(content=_INDISPONIVEL)],
             "turn_agents": turn_agents,
@@ -51,6 +53,7 @@ async def product_advisor_node(state: GraphState, config=None) -> dict:
         resultado.outcome in ("failed", "rejected", "canceled", "unknown")
         or not resultado.text
     ):
+        record_issue(Outcome.TOOL_FAILED, Reason.PRODUCT_ADVISOR_UNAVAILABLE)
         return {
             "messages": [AIMessage(content=_INDISPONIVEL)],
             "turn_agents": turn_agents,

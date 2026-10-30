@@ -9,6 +9,7 @@ from src.agents.specialist.field_conditions.field_conditions_prompt import (
 from src.infra.mcp.client import get_mcp_tools_by_name
 from src.tools.solar import consultar_viabilidade_solar
 from src.workflow.nodes.context import messages_with_summary
+from src.workflow.outcome import Outcome, Reason, record_issue
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent
 
@@ -23,6 +24,7 @@ async def field_conditions_node(state: GraphState, config=None) -> dict:
         tools = await get_mcp_tools_by_name("resolve_names", "lookup_weather")
     except Exception:
         logger.exception("Falha ao carregar as tools do MCP do Maps")
+        record_issue(Outcome.TOOL_FAILED, Reason.MAPS_UNAVAILABLE)
         return {
             "messages": [AIMessage(content=_INDISPONIVEL)],
             "turn_agents": turn_agents,
