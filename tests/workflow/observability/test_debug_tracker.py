@@ -2,7 +2,7 @@ import asyncio
 import json
 from types import SimpleNamespace
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 import src.workflow.observability.debug_tracker as debug_tracker
 from src.workflow.observability.debug_tracker import DebugTracker, mask_pii
@@ -450,3 +450,227 @@ def _llm_ok(texto):
     from langchain_core.outputs import ChatGeneration, LLMResult
 
     return LLMResult(generations=[[ChatGeneration(message=AIMessage(content=texto))]])
+
+
+async def _abrir(tracker, node, run_id):
+    await tracker.on_chain_start(
+        {}, {}, run_id=run_id, metadata=_meta(node), name=node
+    )
+
+
+def test_tool_chamada_fica_no_no_com_entrada_saida_e_tempo():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await _abrir(tracker, "faq_reader", "n1")
+        await tracker.on_tool_start(
+            {"name": "faq_retriever"},
+            "como pagar",
+            run_id="t1",
+            metadata=_meta("faq_reader"),
+            inputs={"query": "como pagar"},
+        )
+        await tracker.on_tool_end("Pague pelo app.", run_id="t1")
+        await tracker.on_chain_end({}, run_id="n1")
+
+    asyncio.run(cenario())
+    node = tracker.snapshot()["nodes"][0]
+
+    assert len(node["tool_calls"]) == 1
+    call = node["tool_calls"][0]
+    assert call["name"] == "faq_retriever"
+    assert call["input"] == {"query": "como pagar"}
+    assert call["output"] == "Pague pelo app."
+    assert call["status"] == "ok"
+    assert call["error"] is None
+    assert call["duration_ms"] >= 0
+    assert [tool["name"] for tool in node["tools"]] == ["faq_retriever"]
+
+
+def test_tool_com_erro_fica_registrada_como_erro():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await _abrir(tracker, "route_planner", "n1")
+        await tracker.on_tool_start(
+            {"name": "calcular_rota"}, "x", run_id="t1", metadata=_meta("route_planner")
+        )
+        await tracker.on_tool_error(TimeoutError("sem resposta"), run_id="t1")
+
+    asyncio.run(cenario())
+    call = tracker.snapshot()["nodes"][0]["tool_calls"][0]
+
+    assert call["status"] == "error"
+    assert call["error"] == "TimeoutError: sem resposta"
+    assert call["output"] is None
+
+
+def test_tools_disponiveis_vem_das_ferramentas_ligadas_ao_modelo():
+    tracker = DebugTracker()
+    openai_tools = [
+        {
+            "type": "function",
+            "function": {"name": "buscar_tela", "description": "Acha a tela."},
+        },
+        {"type": "function", "function": {"name": "buscar_guia"}},
+    ]
+
+    async def cenario():
+        await _abrir(tracker, "screen_finder", "n1")
+        await tracker.on_chat_model_start(
+            {},
+            [[HumanMessage(content="oi")]],
+            run_id="l1",
+            metadata=_meta("screen_finder"),
+            invocation_params={"tools": openai_tools},
+        )
+        await tracker.on_llm_end(_resposta_llm(), run_id="l1")
+
+    asyncio.run(cenario())
+    tools = tracker.snapshot()["nodes"][0]["tools"]
+
+    assert tools == [
+        {"name": "buscar_tela", "description": "Acha a tela."},
+        {"name": "buscar_guia", "description": ""},
+    ]
+
+
+def test_tools_no_formato_do_gemini_tambem_sao_lidas():
+    tracker = DebugTracker()
+    gemini = [{"function_declarations": [{"name": "consultar_clima", "description": "Clima."}]}]
+
+    async def cenario():
+        await _abrir(tracker, "field_conditions", "n1")
+        await tracker.on_chat_model_start(
+            {},
+            [[HumanMessage(content="oi")]],
+            run_id="l1",
+            metadata=_meta("field_conditions"),
+            invocation_params={"tools": gemini},
+        )
+
+    asyncio.run(cenario())
+
+    assert tracker.snapshot()["nodes"][0]["tools"] == [
+        {"name": "consultar_clima", "description": "Clima."}
+    ]
+
+
+def test_mesma_tool_nao_se_repete_na_lista_de_disponiveis():
+    tracker = DebugTracker()
+    tools = [{"type": "function", "function": {"name": "buscar_tela"}}]
+
+    async def cenario():
+        await _abrir(tracker, "screen_finder", "n1")
+        for run_id in ("l1", "l2"):
+            await tracker.on_chat_model_start(
+                {},
+                [[HumanMessage(content=run_id)]],
+                run_id=run_id,
+                metadata=_meta("screen_finder"),
+                invocation_params={"tools": tools},
+            )
+        await tracker.on_tool_start(
+            {"name": "buscar_tela"}, "x", run_id="t1", metadata=_meta("screen_finder")
+        )
+        await tracker.on_tool_end("ok", run_id="t1")
+
+    asyncio.run(cenario())
+
+    assert [t["name"] for t in tracker.snapshot()["nodes"][0]["tools"]] == ["buscar_tela"]
+
+
+def test_tool_do_subgrafo_do_agente_cai_no_no_aberto():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await _abrir(tracker, "data_reader", "n1")
+        await tracker.on_tool_start(
+            {"name": "minhas_ofertas"}, "{}", run_id="t1", metadata=_meta("tools")
+        )
+        await tracker.on_tool_end("ok", run_id="t1")
+
+    asyncio.run(cenario())
+    node = tracker.snapshot()["nodes"][0]
+
+    assert [call["name"] for call in node["tool_calls"]] == ["minhas_ofertas"]
+
+
+def test_tool_fora_de_no_vai_para_a_lista_separada():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await tracker.on_tool_start(
+            {"name": "solta"}, "x", run_id="t1", metadata=_meta("tools")
+        )
+        await tracker.on_tool_end("ok", run_id="t1")
+
+    asyncio.run(cenario())
+    debug = tracker.snapshot()
+
+    assert debug["nodes"] == []
+    assert [call["name"] for call in debug["tool_calls_outside_nodes"]] == ["solta"]
+
+
+def test_dado_pessoal_na_tool_sai_mascarado_e_toolmessage_vira_texto():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await _abrir(tracker, "data_reader", "n1")
+        await tracker.on_tool_start(
+            {"name": "minhas_vendas"},
+            "x",
+            run_id="t1",
+            metadata=_meta("data_reader"),
+            inputs={"email": "ana@exemplo.com"},
+        )
+        await tracker.on_tool_end(
+            ToolMessage(content="Fale com ana@exemplo.com", tool_call_id="c1"),
+            run_id="t1",
+        )
+
+    asyncio.run(cenario())
+    call = tracker.snapshot()["nodes"][0]["tool_calls"][0]
+
+    assert call["input"] == {"email": "[EMAIL]"}
+    assert call["output"] == "Fale com [EMAIL]"
+
+
+def test_tool_do_agente_aparece_no_no_do_agente_e_no_passo_interno():
+    tracker = DebugTracker()
+
+    async def cenario():
+        await _abrir(tracker, "data_reader", "externo")
+        await tracker.on_chain_start(
+            {}, {}, run_id="agente", parent_run_id="externo",
+            metadata=_meta("data_reader"), name="LangGraph",
+        )
+        await tracker.on_chain_start(
+            {}, {}, run_id="modelo", parent_run_id="agente",
+            metadata=_meta("model"), name="model",
+        )
+        await tracker.on_chat_model_start(
+            {}, [[HumanMessage(content="oi")]], run_id="l1", parent_run_id="modelo",
+            metadata=_meta("model"),
+            invocation_params={
+                "tools": [{"type": "function", "function": {"name": "minhas_ofertas", "description": "Lista."}}]
+            },
+        )
+        await tracker.on_chain_end({}, run_id="modelo")
+        await tracker.on_chain_start(
+            {}, {}, run_id="ferramentas", parent_run_id="agente",
+            metadata=_meta("tools"), name="tools",
+        )
+        await tracker.on_tool_start(
+            {"name": "minhas_ofertas"}, "{}", run_id="t1", parent_run_id="ferramentas",
+            metadata=_meta("tools"),
+        )
+        await tracker.on_tool_end("ok", run_id="t1")
+
+    asyncio.run(cenario())
+    nodes = {node["node"]: node for node in tracker.snapshot()["nodes"]}
+
+    assert nodes["data_reader"]["tools"][0] == {"name": "minhas_ofertas", "description": "Lista."}
+    assert [call["name"] for call in nodes["data_reader"]["tool_calls"]] == ["minhas_ofertas"]
+    assert [call["name"] for call in nodes["tools"]["tool_calls"]] == ["minhas_ofertas"]
+    assert nodes["model"]["tool_calls"] == []
