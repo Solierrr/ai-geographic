@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from src.api.auth import require_valid_token
 from src.api.schemas.chat import ChatRequest, ChatResponse
 from src.workflow.outcome import Outcome
 from src.workflow.runner import execute_turn
@@ -22,7 +23,7 @@ bearer_scheme = HTTPBearer(
     ),
     operation_id="sendChatMessage",
     responses={
-        401: {"description": "JWT ausente ou malformado"},
+        401: {"description": "JWT ausente, inválido ou expirado"},
         422: {"description": "Corpo da requisição inválido"},
     },
     openapi_extra={
@@ -38,6 +39,7 @@ async def conversar(
             status_code=401, detail="Authorization header deve ser 'Bearer <token>'"
         )
     user_token = credentials.credentials
+    await require_valid_token(user_token)
 
     from src.workflow.graph.graph import compiled_app
 

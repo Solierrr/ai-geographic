@@ -38,7 +38,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ChatResponse'
         '401':
-          description: JWT ausente ou malformado
+          description: JWT ausente, inválido ou expirado
           content: &id001
             application/problem+json:
               schema:
