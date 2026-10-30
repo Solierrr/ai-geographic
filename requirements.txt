@@ -22,7 +22,11 @@ redis
 pyjwt
 solaria-network[a2a]>=0.2,<0.3
 python-dotenv
-opentelemetry-distro==0.66b1
+# observabilidade | modelo SOLIER FastAPI (mesmas versões já usadas em ai-geographic)
+opentelemetry-sdk==1.45.1
 opentelemetry-exporter-otlp-proto-http==1.45.1
 opentelemetry-instrumentation-fastapi==0.66b1
+opentelemetry-instrumentation-httpx==0.66b1
 opentelemetry-instrumentation-logging==0.66b1
+opentelemetry-instrumentation-pymongo==0.66b1
+opentelemetry-instrumentation-redis==0.66b1
