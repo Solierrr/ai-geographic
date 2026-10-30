@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     MONGO_URI: str = Field(
         "mongodb://localhost:27017",
-        validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI"),
+        validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI", "DB_MONGO_URI"),
     )
     DB_MONGO_AGENTS: str = "dbagents"
     CHECKPOINT_TTL_DIAS: int = 30
@@ -20,10 +20,13 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = "LOCAL"
 
+    DOCS_ENABLED: bool = True
     CORS_ALLOWED_ORIGINS: str = (
         "http://localhost:5173,http://localhost:3000,http://localhost:5174,"
         "http://127.0.0.1:5174,https://web-sandbox-7ug0.onrender.com"
     )
+
+    DEBUG_ADMIN_SUBS: str = ""
 
     TEST_USER_TOKEN: str | None = (
         None  # só pra uso local via main.py, nunca em produção
@@ -34,7 +37,10 @@ class Settings(BaseSettings):
     GOOGLE_MAPS_API_KEY: str | None = None
 
     # google-registry: viabilidade solar do telhado (Solar API do Google).
-    REGISTRY_URL: str = "http://localhost:8004"
+    REGISTRY_URL: str = Field(
+        "http://localhost:8000",
+        validation_alias=AliasChoices("REGISTRY_URL", "GOOGLE_REGISTRY_URL"),
+    )
     REGISTRY_CONSUMER_TOKEN: str | None = None
 
     # A2A: o ai-assistant recebe a delegação de recomendação de produtos.

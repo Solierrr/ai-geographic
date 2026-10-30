@@ -1,34 +1,38 @@
 from fastapi.testclient import TestClient
 
+from src.api.routes import health
 from src.api.app import app
+from src.version import VERSION
 
 client = TestClient(app)
 
 
-class _Keys:
-    def __init__(self, providers):
-        self._providers = providers
-
-    def providers(self):
-        return self._providers
-
-
-def test_health_returns_ok_when_keys_present(monkeypatch):
-    monkeypatch.setattr("src.api.app.key_client", lambda: _Keys(["gemini", "groq"]))
-
+def test_health_returns_up_with_version():
     response = client.get("/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "missing_settings": []}
+    assert response.json() == {"status": "UP", "version": VERSION}
 
 
-def test_health_reports_missing_keys(monkeypatch):
-    monkeypatch.setattr("src.api.app.key_client", lambda: _Keys([]))
+def test_ready_returns_up_when_mongo_answers(monkeypatch):
+    async def ping():
+        return None
 
-    response = client.get("/health")
+    monkeypatch.setattr(health, "_ping_mongo", ping)
+
+    response = client.get("/ready")
 
     assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "atencao"
-    assert "GEMINI_API_KEY" in body["missing_settings"]
-    assert "GROQ_API_KEY" in body["missing_settings"]
+    assert response.json() == {"status": "UP"}
+
+
+def test_ready_returns_down_when_mongo_fails(monkeypatch):
+    async def ping():
+        raise ConnectionError("mongo fora")
+
+    monkeypatch.setattr(health, "_ping_mongo", ping)
+
+    response = client.get("/ready")
+
+    assert response.status_code == 503
+    assert response.json() == {"status": "DOWN"}

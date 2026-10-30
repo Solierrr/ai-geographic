@@ -1,18 +1,16 @@
 import asyncio
+from getpass import getpass
 from uuid import uuid4
 
-from src.core.config.settings import settings
 from src.workflow.runner import execute_turn
 
 
 async def run_chat():
     from src.workflow.graph.graph import compiled_app
 
-    if not settings.TEST_USER_TOKEN:
-        print(
-            "Defina TEST_USER_TOKEN no .env com um JWT válido (mock-idp ou "
-            "api-auth) antes de rodar."
-        )
+    user_token = getpass("JWT do api-auth local (entrada oculta): ").strip()
+    if not user_token:
+        print("Faça login no api-auth local e informe o access token para conversar.")
         return
 
     conversation_id = str(uuid4())
@@ -33,7 +31,7 @@ async def run_chat():
                 conversation_id,
                 user_input,
                 compiled_app,
-                user_token=settings.TEST_USER_TOKEN,
+                user_token=user_token,
             )
             print(f"{final_state['messages'][-1].content}")
 

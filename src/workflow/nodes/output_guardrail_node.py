@@ -8,6 +8,7 @@ from src.agents.base.base_prompt import build_system_prompt
 from src.core.guardrails.anonymize import deanonymize_text
 from src.core.guardrails.prompt import _PROMPT_COMPLIANCE
 from src.core.llm.llm_groq import llm_groq
+from src.workflow.outcome import Outcome, Reason, record_issue
 from src.workflow.state import GraphState
 from src.workflow.turn_tracking import append_turn_agent, specialists_used
 
@@ -78,6 +79,7 @@ def output_guardrail_node(state: GraphState, config=None) -> dict:
         # fail-closed: se o guardrail nao conseguiu revisar, nao deixa a
         # resposta nao revisada sair - troca por uma mensagem generica
         logger.warning("Falha ao avaliar output_guardrail: %s", erro)
+        record_issue(Outcome.DEGRADED, Reason.GUARDRAIL_UNAVAILABLE)
         final_text = FALLBACK_RESPONSE
 
     workflow_steps = append_turn_agent(state, "output_guardrail")
