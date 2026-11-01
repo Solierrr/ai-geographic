@@ -1,0 +1,9 @@
+{
+  "service": "ai-geographic",
+  "aliases": [
+    "geographic",
+    "ai-geographic"
+  ],
+  "project": "AI",
+  "host": "https://geographic.solarianetwork.site"
+}
