@@ -41,7 +41,6 @@ class Settings(BaseSettings):
         "http://localhost:8000",
         validation_alias=AliasChoices("REGISTRY_URL", "GOOGLE_REGISTRY_URL"),
     )
-    REGISTRY_CONSUMER_TOKEN: str | None = None
 
     # A2A: o ai-assistant recebe a delegação de recomendação de produtos.
     A2A_ASSISTANT_URL: str = "http://localhost:8000"

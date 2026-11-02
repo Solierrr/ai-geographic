@@ -32,7 +32,6 @@ A conversa combina consultas ao Google Maps, dados solares e recomendações de 
 - [STATUS.md](./docs/STATUS.md), limites observados.
 - [Fluxos](./flows/), etapas e casos de erro do repositório.
 - [Dados](./database/), modelos e responsabilidades de persistência.
-- [PENDENCIAS.md](./PENDENCIAS.md), questões para revisão.
 
 ## Contribuindo
 
