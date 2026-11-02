@@ -7,27 +7,8 @@ class Settings(BaseSettings):
         "mongodb://localhost:27017",
         validation_alias=AliasChoices("MONGO_URI", "MONGODB_URI", "DB_MONGO_URI"),
     )
+    DB_MONGO_AGENTS: str = "dbagents"
     CHECKPOINT_TTL_DIAS: int = 30
-
-    # O Infisical guarda o Redis dos agentes como UPSTASH_AGENTS_*.
-    UPSTASH_REDIS_HOST: str | None = Field(
-        None, validation_alias=AliasChoices("UPSTASH_REDIS_HOST", "UPSTASH_AGENTS_HOST")
-    )
-    UPSTASH_REDIS_PORT: int = Field(
-        6379, validation_alias=AliasChoices("UPSTASH_REDIS_PORT", "UPSTASH_AGENTS_PORT")
-    )
-    UPSTASH_REDIS_USERNAME: str = Field(
-        "default",
-        validation_alias=AliasChoices(
-            "UPSTASH_REDIS_USERNAME", "UPSTASH_AGENTS_USERNAME"
-        ),
-    )
-    UPSTASH_REDIS_PASSWORD: str | None = Field(
-        None,
-        validation_alias=AliasChoices(
-            "UPSTASH_REDIS_PASSWORD", "UPSTASH_AGENTS_PASSWORD"
-        ),
-    )
 
     API_MESSENGER_URL: str | None = None
     SERVICE_KEY: str | None = Field(
