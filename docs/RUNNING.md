@@ -6,7 +6,7 @@
 
 Use Python 3.14, a versão do [Dockerfile](https://github.com/Solierrr/ai-geographic/blob/main/Dockerfile), `make`, MongoDB e Infisical CLI autenticado. O procedimento comum está em [PYTHON.md](https://github.com/Solierrr/docs-warehouse/blob/main/readme/running/PYTHON.md).
 
-Execute `make install`, `make vault` e `make dev`, sabendo que a exportação do cofre usa as pastas `/database`, `/redis`, `/llm`, `/service-urls`, `/mcp`, `/service-keys`, `/otel`, `/auth` e `/google` e que o comando de desenvolvimento inicia `src.api.app:app` com o Uvicorn.
+Execute `make install`, `make vault` e `make dev`, sabendo que a exportação do cofre usa as pastas `/database`, `/llm`, `/service-urls`, `/mcp`, `/service-keys`, `/otel`, `/auth` e `/google` e que o comando de desenvolvimento inicia `src.api.app:app` com o Uvicorn.
 
 | Comando | Efeito |
 |---|---|
