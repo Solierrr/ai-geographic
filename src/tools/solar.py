@@ -9,10 +9,7 @@ _SEGMENTOS_MOSTRADOS = 3
 
 
 def _headers() -> dict[str, str]:
-    headers = {"X-Service-Key": settings.SERVICE_KEY} if settings.SERVICE_KEY else {}
-    if settings.REGISTRY_CONSUMER_TOKEN:
-        headers["Authorization"] = f"Bearer {settings.REGISTRY_CONSUMER_TOKEN}"
-    return headers
+    return {"X-Service-Key": settings.SERVICE_KEY} if settings.SERVICE_KEY else {}
 
 
 def _resumir(dados: dict) -> dict:
@@ -46,7 +43,7 @@ async def consultar_viabilidade_solar(latitude: float, longitude: float) -> dict
             headers=_headers(),
         ) as client:
             resposta = await client.get(
-                "/v1/solar/roof-viability",
+                "/internal/solar/roof-viability",
                 params={"latitude": latitude, "longitude": longitude},
             )
     except httpx.HTTPError:
