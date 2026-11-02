@@ -10,6 +10,8 @@ from opentelemetry import trace
 from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException
 
+from src.core.observability.observability import TRACE_ID_HEADER, mark_error
+
 logger = logging.getLogger(__name__)
 
 PROBLEM_JSON = "application/problem+json"
@@ -78,16 +80,22 @@ def problem(
         **_trace_id(),
         **extra,
     }
-    return JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
+    response = JSONResponse(body, status_code=status, media_type=PROBLEM_JSON)
+    # o 500 sai pelo ServerErrorMiddleware, fora do middleware de X-Trace-Id -> header posto aqui também
+    if "traceId" in body:
+        response.headers[TRACE_ID_HEADER] = body["traceId"]
+    return response
 
 
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def api_error(request: Request, exc: ApiError):
+        mark_error(exc)
         return problem(request, exc.status, exc.error_code, exc.detail, **exc.extra)
 
     @app.exception_handler(HTTPException)
     async def http_error(request: Request, exc: HTTPException):
+        mark_error(exc)
         code = GENERIC_BY_STATUS.get(exc.status_code, "INTERNAL_ERROR")
         response = problem(request, exc.status_code, code, str(exc.detail))
         if exc.headers:
@@ -96,6 +104,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request: Request, exc: RequestValidationError):
+        mark_error(exc)
         errors = [
             {
                 "field": ".".join(str(part) for part in error["loc"][1:]),
@@ -114,6 +123,7 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unexpected_error(request: Request, exc: Exception):
+        mark_error(exc)
         logger.exception("Erro inesperado em %s", request.url.path)
         return problem(
             request, 500, "INTERNAL_ERROR", "Ocorreu um erro interno inesperado."
