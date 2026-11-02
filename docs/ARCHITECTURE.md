@@ -1,42 +1,33 @@
-# Arquitetura do Repositório
-
-Este serviço segue o mesmo padrão do `ai-assistant`: uma API FastAPI que
-expõe um chatbot orquestrado via LangGraph, com guardrails de entrada/saída,
-memória de curto prazo (checkpointer Mongo) e memória de longo prazo (perfil
-de fatos do usuário), delegando a especialistas de domínio por meio de um
-Agente Roteador. Os especialistas são o Planejador de Rotas e o de Condições de Campo, que usam o MCP oficial do Google Maps (Grounding Lite), e o de Produtos, que delega ao `ai-assistant` por A2A repassando o JWT do profissional. Não há banco de dados de negócio: lugares, clima e rotas vêm do Google.
-
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=python,fastapi,langchain,mongodb,redis" height="48" alt="Arquitetura">
-  </a>
+<p align="center">
+  <img src="../assets/readme/banners/fastapi.png" alt="FastAPI" width="100%">
 </p>
 
-- Orquestração multiagente via LangGraph (`src/workflow/graph/graph.py`):
-  `input_guardrail` → `condense_memory` → `router` → especialista(s) →
-  `orchestrator` → `judge` → `output_guardrail`.
-- Cada especialista de domínio vive em `src/agents/specialist/<nome>/` (prompt)
-  e `src/workflow/nodes/<nome>_node.py` (node). Os especialistas são `route_planner`
-  e `field_conditions` (ferramentas do MCP do Google Maps) e `product_advisor`
-  (delegação A2A ao `ai-assistant`).
-- Integrações de infraestrutura ficam em `src/infra/` (Mongo, Redis, MCP,
-  api-messenger); nenhuma delas depende do domínio específico do assistente.
-- Autenticação via JWT emitido pelo `api-auth` (`src/core/security/jwt.py`).
+# Arquitetura
 
-```Tree do Repositório (resumo)
-├── .github/
-│   └── pull_request_template.md
-├── src/
-│   ├── agents/       # framework base + especialistas
-│   ├── api/          # FastAPI (rotas, schemas)
-│   ├── core/         # config, llm, guardrails, logging, security
-│   ├── infra/        # clientes de infraestrutura (mongo, redis, mcp, api-messenger)
-│   ├── memory/        # checkpointer de sessão
-│   └── workflow/     # grafo LangGraph, nodes, state
-├── tests/
-├── README.md
-├── ARCHITECTURE.md
-├── RUNNING.md
-├── LICENSE
-└── ...
+A API FastAPI executa um grafo LangGraph com guardrails, resumo, roteamento, especialistas, orquestração e revisão. A fonte principal é o [grafo](https://github.com/Solierrr/ai-geographic/blob/main/src/workflow/graph/graph.py).
+
+```mermaid
+flowchart LR
+ C[Cliente] -->|HTTP e JWT| A[FastAPI]
+ A --> G[LangGraph]
+ G --> M[(MongoDB)]
+ G -->|MCP HTTP e chave Google| MAP[Google Maps]
+ G -->|HTTP e X-Service-Key| SOL[api-google]
+ G -->|A2A e JWT| ASS[ai-assistant]
+ G -->|HTTP e X-Service-Key| MSG[api-messenger]
+ G --> L[Provedores de linguagem]
 ```
+
+As rotas e os schemas ficam em `src/api/`, o grafo e os seus nós em `src/workflow/` e os prompts em `src/agents/`. Os clientes externos e a persistência ficam em `src/infra/`, enquanto as configurações e a validação do JWT ficam em `src/core/`.
+
+| Integração | Protocolo e autenticação |
+|---|---|
+| Cliente para `/chat` | HTTP com Bearer JWT validado pelo JWKS do `api-auth` |
+| Google Maps | MCP `streamable_http`, configurado em `MAPS_MCP_URL` |
+| `api-google` | HTTP com `X-Service-Key` e suporte ao token legado configurado |
+| `ai-assistant` | A2A com JWT do profissional e persona `profissional` |
+| `api-messenger` | Rotas internas HTTP com `X-Service-Key` |
+
+O especialista de produtos usa a biblioteca A2A para delegar ao assistente principal, mas este serviço não publica um Agent Card próprio. Os detalhes da memória estão em [MONGO.md](../database/MONGO.md), e as integrações seguem o [mapa central](https://github.com/Solierrr/docs-warehouse/blob/main/docs/flows/INTEGRATIONS.md).
+
+O `/health` informa se o processo está no ar e a versão lida de `version.txt`, enquanto o `/ready` testa o Mongo com limite de dois segundos e deixa os modelos de linguagem de fora, porque eles têm alternativa em caso de falha. A instrumentação OpenTelemetry é iniciada pela aplicação e pode ser desligada com `OTEL_SDK_DISABLED`.

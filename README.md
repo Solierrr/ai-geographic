@@ -1,64 +1,41 @@
-# ai-geographic
+<p align="center">
+  <img src="./assets/readme/banners/fastapi.png" alt="FastAPI" width="100%">
+</p>
 
-Copiloto de campo do profissional de energia solar (técnicos, instaladores e engenheiros em serviço), usado no app mobile da Solaria. Ele ajuda quem está na rua a planejar a rota até o cliente, a decidir se vale ir a uma região em uma data (clima, chuva, vento e luz do dia) e a ter uma noção aproximada do potencial solar do local. Usa o MCP oficial do Google Maps (lugares, clima e rotas) e, quando a dúvida é sobre produtos, delega ao `ai-assistant` por A2A, repassando o JWT do profissional.
+<p align="center">
+  <img src="./assets/readme/stacks/python.png" width="100" hspace="8" alt="Python" title="Python">
+  <img src="./assets/readme/stacks/mongodb.png" width="100" hspace="8" alt="MongoDB" title="MongoDB">
+  <img src="./assets/readme/stacks/google-maps.png" width="100" hspace="8" alt="Google Maps" title="Google Maps">
+  <img src="./assets/readme/stacks/langchain.png" width="100" hspace="8" alt="LangChain" title="LangChain">
+  <img src="./assets/readme/stacks/gemini.png" width="100" hspace="8" alt="Gemini" title="Gemini">
+  <img src="./assets/readme/stacks/groq.png" width="100" hspace="8" alt="Groq" title="Groq">
+</p>
 
-<p>
+# Copiloto de campo
 
 [![License](https://img.shields.io/github/license/Solierrr/ai-geographic)](https://github.com/Solierrr/ai-geographic/blob/main/LICENSE)
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/Solierrr/ai-geographic)](https://github.com/Solierrr/ai-geographic/commits)
-[![GitHub Issues](https://img.shields.io/github/issues/Solierrr/ai-geographic)](https://github.com/Solierrr/ai-geographic/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/Solierrr/ai-geographic)](https://github.com/Solierrr/ai-geographic/pulls)
 [![Release](https://img.shields.io/github/v/release/Solierrr/ai-geographic)](https://github.com/Solierrr/ai-geographic/releases)
 
-</p>
+O copiloto atende profissionais de instalação e manutenção que precisam organizar visitas em campo. Ele ajuda a planejar deslocamentos, avaliar condições do tempo e consultar uma estimativa do potencial solar de um telhado. As respostas apoiam a preparação da visita e não substituem o estudo técnico do projeto.
 
-<p>
-  <a href="https://github.com/syvixor/skills-icons">
-    <img src="https://skills.syvixor.com/api/icons?i=python,fastapi,langchain,mongodb,redis,docker" height="48" alt="Stack">
-  </a>
-</p>
-
-## API
-
-| O quê | Caminho | Observação |
-|---|---|---|
-| Swagger UI | `/docs` | desligado com `DOCS_ENABLED=false` (PROD) |
-| Contrato OpenAPI | `/openapi.json` | o mesmo contrato fica versionado em `openapi.yaml`, gerado por `make openapi` e conferido no CI |
-| Conversa | `POST /chat` | JWT do `api-auth` em `Authorization: Bearer <token>` |
-| Vivo | `GET /health` | `{"status":"UP","version":"X.Y.Z"}` |
-| Pronto | `GET /ready` | ping no Mongo; 503 com `{"status":"DOWN"}` quando ele não responde |
-
-Todo erro HTTP sai como `application/problem+json`, com `errorCode` do catálogo de erros do `docs-warehouse`. O que acontece dentro da conversa não é erro: a resposta do turno volta 200 com `outcome` (`ANSWERED`, `REFUSED`, `DEGRADED` ou `TOOL_FAILED`) e `reason`, presente quando `outcome` não é `ANSWERED`:
-
-| `reason` | `outcome` | Quando |
-|---|---|---|
-| `OUT_OF_SCOPE` | `REFUSED` | pergunta fora do escopo do copiloto |
-| `MANIPULATION_ATTEMPT` | `REFUSED` | tentativa de manipular as instruções do agente |
-| `INTERNAL_DATA_REQUEST` | `REFUSED` | pedido de dados internos da plataforma |
-| `FALSE_INFORMATION` | `REFUSED` | mensagem baseada em informação falsa |
-| `GUARDRAIL_REFUSED` | `REFUSED` | recusa do guardrail sem categoria conhecida |
-| `GUARDRAIL_UNAVAILABLE` | `DEGRADED` | o guardrail não conseguiu avaliar e a resposta saiu genérica |
-| `LLM_FALLBACK` | `DEGRADED` | um provedor de LLM falhou e outro respondeu |
-| `MAPS_UNAVAILABLE` | `TOOL_FAILED` | o MCP do Google Maps não respondeu |
-| `SOLAR_DATA_UNAVAILABLE` | `TOOL_FAILED` | a viabilidade solar do `api-google` não respondeu |
-| `PRODUCT_ADVISOR_UNAVAILABLE` | `TOOL_FAILED` | a delegação ao `ai-assistant` falhou |
-| `TOOL_ERROR` | `TOOL_FAILED` | outra ferramenta falhou durante o turno |
-
-### Chamadas a outros serviços
-
-- `api-messenger`: rotas `/internal/**` com `X-Service-Key` (`SERVICE_KEY`).
-- `api-google`: viabilidade solar com `X-Service-Key` (`SERVICE_KEY`). Enquanto o `api-google` não exige a chave, o `REGISTRY_CONSUMER_TOKEN`, se definido, segue junto como `Authorization: Bearer`.
-
-### A2A
-
-O A2A não é OpenAPI e fica fora do contrato. Este serviço só consome A2A: quando a dúvida é sobre produtos, o especialista de Produtos delega ao `ai-assistant` (`A2A_ASSISTANT_URL`) pelo cliente da `lib-ai`, repassando o JWT do profissional e a persona `profissional`. O `ai-geographic` não publica Agent Card próprio, porque nenhum agente delega a ele.
+A conversa combina consultas ao Google Maps, dados solares e recomendações de produtos obtidas com outro assistente. O acesso usa o JWT da plataforma. O MongoDB conserva o estado da conversa e fatos do profissional para os próximos atendimentos, enquanto o serviço de mensagens recebe o histórico e os registros de execução.
 
 ## Aprofunde-se no Projeto!
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [RUNNING.md](./RUNNING.md)
+- [OVERVIEW.md](./docs/OVERVIEW.md), finalidade e regras de produto.
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md), componentes, dados e integrações.
+- [RUNNING.md](./docs/RUNNING.md), preparação e execução local.
+- [API.md](./docs/API.md), autenticação e uso do contrato.
+- [DEPLOY.md](./docs/DEPLOY.md), ambientes e publicação.
+- [STATUS.md](./docs/STATUS.md), limites observados.
+- [Fluxos](./flows/), etapas e casos de erro do repositório.
+- [Dados](./database/), modelos e responsabilidades de persistência.
+- [PENDENCIAS.md](./PENDENCIAS.md), questões para revisão.
 
 ## Contribuindo
 
-- Escreva commits em Conventional Commits, em inglês e minúsculas (`feat:`, `fix:` etc.).
-- Todo PR deve usar o `.github/pull_request_template.md` deste repositório.
+- [CONTRIBUTING.md](https://github.com/Solierrr/.github/blob/main/.github/CONTRIBUTING.md), convenções de contribuição.
+- [CODE_OF_CONDUCT.md](https://github.com/Solierrr/.github/blob/main/CODE_OF_CONDUCT.md), código de conduta.
+- [SECURITY.md](https://github.com/Solierrr/.github/blob/main/SECURITY.md), relato de vulnerabilidades.
